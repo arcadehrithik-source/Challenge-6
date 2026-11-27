@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -81,6 +81,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   } = useBreatheWise();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const closeDrawerButtonRef = useRef<HTMLButtonElement | null>(null);
+  const prevSidebarOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (sidebarOpen) {
+      closeDrawerButtonRef.current?.focus();
+    } else if (prevSidebarOpenRef.current) {
+      menuButtonRef.current?.focus();
+    }
+    prevSidebarOpenRef.current = sidebarOpen;
+  }, [sidebarOpen]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -109,6 +121,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <button
+              ref={menuButtonRef}
               type="button"
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#d0ddd5] lg:hidden cursor-pointer"
               aria-label={sidebarOpen ? "Close navigation menu" : "Open navigation menu"}
@@ -161,12 +174,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 variant="ghost"
                 aria-label="View daily air alerts"
                 aria-expanded={alertsOpen}
+                aria-controls="daily-alerts-popover"
                 onClick={() => setAlertsOpen((v) => !v)}
               >
                 <Bell className="h-4 w-4" aria-hidden="true" />
               </Button>
               {alertsOpen && (
                 <div
+                  id="daily-alerts-popover"
                   role="region"
                   aria-label="Air quality alert summary"
                   className="absolute right-0 mt-2 w-72 rounded-2xl border border-[#dce5df] bg-white p-4 shadow-xl z-50"
@@ -230,16 +245,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               aria-hidden="true"
             />
             <aside
+              role="dialog"
+              aria-modal="true"
               aria-label="Mobile dashboard navigation"
               className="relative z-50 w-72 bg-white p-4 shadow-xl"
             >
               <div className="mb-4 flex items-center justify-between">
                 <Logo href="/" />
                 <button
+                  ref={closeDrawerButtonRef}
                   type="button"
                   aria-label="Close navigation"
                   onClick={() => setSidebarOpen(false)}
-                  className="rounded-lg p-1.5 hover:bg-[#edf3ef]"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-[#edf3ef]"
                 >
                   <X className="h-4 w-4" />
                 </button>

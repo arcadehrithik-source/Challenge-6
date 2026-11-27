@@ -129,4 +129,42 @@ describe("API Route validation, fallback, and rate limiting", () => {
     const blockedRes = await postAssistant(blockedReq);
     expect(blockedRes.status).toBe(429);
   });
+
+  it("POST /api/assistant rejects malformed JSON and oversized Content-Length headers", async () => {
+    const badJsonReq = new NextRequest("http://localhost:3000/api/assistant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-forwarded-for": "10.0.0.55" },
+      body: "{not-json",
+    });
+    expect((await postAssistant(badJsonReq)).status).toBe(400);
+
+    const declaredHugeReq = new NextRequest("http://localhost:3000/api/assistant", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": "999999",
+        "x-forwarded-for": "10.0.0.56",
+      },
+      body: "{}",
+    });
+    expect((await postAssistant(declaredHugeReq)).status).toBe(413);
+  });
+
+  it("GET /api/air-quality enforces per-client rate limiting (429)", async () => {
+    for (let i = 0; i < 45; i++) {
+      const okReq = new NextRequest(
+        "http://localhost:3000/api/air-quality?city=Delhi&mode=demo&scenario=poor",
+        { headers: { "x-forwarded-for": "10.0.0.77" } }
+      );
+      expect((await getAirQuality(okReq)).status).toBe(200);
+    }
+
+    const limitedReq = new NextRequest(
+      "http://localhost:3000/api/air-quality?city=Delhi&mode=demo&scenario=poor",
+      { headers: { "x-forwarded-for": "10.0.0.77" } }
+    );
+    const limitedRes = await getAirQuality(limitedReq);
+    expect(limitedRes.status).toBe(429);
+    expect(limitedRes.headers.get("X-RateLimit-Limit")).toBe("45");
+  });
 });

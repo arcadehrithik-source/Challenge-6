@@ -27,10 +27,13 @@ describe("Indian NAQI calculation & categorization", () => {
     expect(dustDriven.category).toBe("Poor");
   });
 
-  it("handles missing or negative pollutant values safely without NaN", () => {
+  it("handles missing or negative pollutant values safely without NaN and describes NO2/O3", () => {
     const res = calculateIndianAqi({ pm25: null, pm10: null, no2: -5 });
     expect(res.aqi).toBe(0);
     expect(res.category).toBe("Good");
     expect(describePollutant("PM2.5", null)).toContain("Unavailable");
+    expect(describePollutant("NO2", 42.5)).toContain("Nitrogen dioxide");
+    expect(describePollutant("O3", 55)).toContain("Ground-level ozone");
+    expect(calculateIndianAqi({ pm25: 900, pm10: 900 }).aqi).toBe(500);
   });
 });

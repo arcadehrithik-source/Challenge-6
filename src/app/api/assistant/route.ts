@@ -10,6 +10,7 @@ import { checkRateLimit, getClientIdentifier } from "@/lib/security/rate-limit";
 import { enforcePayloadSize } from "@/lib/security/sanitize";
 
 const ASSISTANT_RATE_LIMIT = 12;
+const MAX_ASSISTANT_BODY_BYTES = 16_384;
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,8 +27,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const contentLengthHeader = request.headers.get("content-length");
+    if (contentLengthHeader) {
+      const declaredBytes = Number(contentLengthHeader);
+      if (Number.isFinite(declaredBytes) && declaredBytes > MAX_ASSISTANT_BODY_BYTES) {
+        return NextResponse.json(
+          { error: "Request payload exceeds maximum allowed size (16 KB)." },
+          { status: 413 }
+        );
+      }
+    }
+
     const rawBody = await request.text();
-    if (!enforcePayloadSize(rawBody, 16_384)) {
+    if (!enforcePayloadSize(rawBody, MAX_ASSISTANT_BODY_BYTES)) {
       return NextResponse.json(
         { error: "Request payload exceeds maximum allowed size (16 KB)." },
         { status: 413 }

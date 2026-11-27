@@ -4,6 +4,8 @@ const INJECTION_PATTERNS: RegExp[] = [
   /reveal\s+(your\s+)?(system\s+prompt|api\s+key|environment\s+variables|secrets)/i,
   /print\s+process\.env/i,
   /act\s+as\s+(a\s+)?(doctor|physician|medical\s+diagnoser)\s+and\s+prescribe/i,
+  /(\[INST\]|<<SYS>>|<\|im_start\|>system)/i,
+  /bypass\s+(all\s+)?(safety|security|content)\s+(filters|rules|guardrails)/i,
   /<\s*script\b/i,
   /javascript:/i,
 ];

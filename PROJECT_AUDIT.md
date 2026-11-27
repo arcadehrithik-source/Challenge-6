@@ -13,8 +13,8 @@
    - Implemented: `next/dynamic` lazy loading for Recharts (`HourlyAqiChart`), bounded 10-minute server cache (`MAX_CACHE_ENTRIES = 100`) with in-flight deduplication, upstream `AbortSignal.timeout`, static prerendering across 11 UI routes.
    - Tested & Passed: `npm run build`, cache deduplication assertion in `tests/integration/air-quality-service.test.ts`.
 4. **Testing**:
-   - Implemented: Unit, integration, security, E2E (Desktop + Mobile Chrome), and `axe-core` WCAG 2.2 AA tests.
-   - Tested & Passed: `npm run test:coverage` (`35/35` tests across 9 files), `npm run test:e2e` (`2/2` passed), `npm run test:a11y` (`12/12` passed).
+   - Implemented: Unit (logic + React Testing Library components), integration, security, E2E (Desktop + Mobile Chrome), and `axe-core` WCAG 2.2 AA tests with enforced coverage thresholds in `vitest.config.ts`.
+   - Tested & Passed: `npm run test:coverage` (`43/43` tests across 10 files; `89.89%` stmts, `91.38%` lines, `97.61%` funcs, `75.61%` branches), `npm run test:e2e` (`2/2` passed), `npm run test:a11y` (`12/12` passed).
 5. **Accessibility**:
    - Implemented: Semantic landmarks, skip link, `h1→h2→h3` hierarchy, visible focus indicators, non-color-only `AqiBadge`, `aria-describedby` form errors, `Escape` key dismissal, `MotionConfig reducedMotion="user"`.
    - Tested & Passed: `@axe-core/playwright` (`0` violations across all 11 routes) + Tab/Escape keyboard test.

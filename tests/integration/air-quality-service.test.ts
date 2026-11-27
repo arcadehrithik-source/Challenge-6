@@ -61,4 +61,32 @@ describe("Air Quality Service integration", () => {
     expect(res.isFallback).toBe(true);
     expect(res.fallbackReason).toContain("missing");
   });
+
+  it("resolves coordinates via geocoding for non-preset cities and deduplicates concurrent calls", async () => {
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes("geocoding-api")) {
+        return {
+          ok: true,
+          json: async () => ({
+            results: [{ name: "Durgapur", latitude: 23.5204, longitude: 87.3119 }],
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => MOCK_OPEN_METEO_RESPONSE,
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const [a, b] = await Promise.all([
+      getAirQualitySnapshot({ city: "Durgapur", mode: "live" }),
+      getAirQualitySnapshot({ city: "Durgapur", mode: "live" }),
+    ]);
+
+    expect(a.city).toBe("Durgapur");
+    expect(b.city).toBe("Durgapur");
+    // Only 1 geocoding + 1 air-quality fetch despite 2 concurrent calls
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

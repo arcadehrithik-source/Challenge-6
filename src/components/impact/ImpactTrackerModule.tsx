@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Award, Flame, Leaf } from "lucide-react";
 import { useBreatheWise } from "@/components/providers/BreatheWiseProvider";
@@ -13,12 +13,16 @@ export function ImpactTrackerModule() {
   const { checklist, profile, streakDays, toggleChecklistItem } = useBreatheWise();
   const [timeframe, setTimeframe] = useState<"weekly" | "monthly">("weekly");
 
-  const metrics = calculateImpactMetrics({
-    checklist,
-    commuteMode: profile.commute,
-    commuteDistanceKm: profile.commuteDistanceKm,
-    streakDays,
-  });
+  const metrics = useMemo(
+    () =>
+      calculateImpactMetrics({
+        checklist,
+        commuteMode: profile.commute,
+        commuteDistanceKm: profile.commuteDistanceKm,
+        streakDays,
+      }),
+    [checklist, profile.commute, profile.commuteDistanceKm, streakDays]
+  );
 
   const multiplier = timeframe === "monthly" ? 4 : 1;
   const displayedCo2 = Number((metrics.estimatedCo2AvoidedKg * multiplier).toFixed(2));
@@ -38,6 +42,7 @@ export function ImpactTrackerModule() {
             <button
               key={tf}
               type="button"
+              aria-pressed={timeframe === tf}
               onClick={() => setTimeframe(tf)}
               className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold capitalize cursor-pointer ${
                 timeframe === tf ? "bg-[#0d3b2e] text-white" : "text-[#4b5e56]"
@@ -133,6 +138,37 @@ export function ImpactTrackerModule() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+            <details className="mt-3 rounded-xl border border-[#e3ece6] bg-[#f8fbf9] px-3 py-2 text-xs text-[#30443c]">
+              <summary className="cursor-pointer font-semibold text-[#10201a]">
+                View weekly CO2 data table
+              </summary>
+              <div className="mt-2 overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-[#dce5df] text-[#4b5e56]">
+                      <th scope="col" className="py-1.5 pr-3 font-semibold">
+                        Day
+                      </th>
+                      <th scope="col" className="py-1.5 pr-3 font-semibold">
+                        Est. CO2 Avoided (kg)
+                      </th>
+                      <th scope="col" className="py-1.5 font-semibold">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metrics.weeklySeries.map((row) => (
+                      <tr key={row.day} className="border-b border-[#edf3ef] last:border-0">
+                        <td className="py-1.5 pr-3 font-medium text-[#10201a]">{row.day}</td>
+                        <td className="py-1.5 pr-3">{row.co2Kg}</td>
+                        <td className="py-1.5">{row.actions}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
           </CardContent>
         </Card>
 

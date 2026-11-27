@@ -18,6 +18,12 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary"],
       include: ["src/lib/**/*.ts", "src/app/api/**/*.ts"],
+      thresholds: {
+        lines: 88,
+        statements: 88,
+        functions: 95,
+        branches: 75,
+      },
     },
   },
   resolve: {

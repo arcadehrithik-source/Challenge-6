@@ -67,4 +67,29 @@ describe("Context-aware recommendation engine", () => {
     const checklist = buildDefaultChecklist(POOR_AIR_FIXTURE, DEFAULT_USER_PROFILE);
     expect(checklist.length).toBeGreaterThanOrEqual(5);
   });
+
+  it("handles outdoor worker, two-wheeler, car, and solid biomass cooking profiles", () => {
+    const outdoorProfile = {
+      ...DEFAULT_USER_PROFILE,
+      lifestyle: "outdoor_worker" as const,
+      commute: "two_wheeler" as const,
+      indoorEnvironment: {
+        ...DEFAULT_USER_PROFILE.indoorEnvironment,
+        cookingFuel: "solid_biomass_kerosene" as const,
+      },
+    };
+    const recs = generateRecommendations(SEVERE_AIR_FIXTURE, outdoorProfile);
+    expect(recs.some((r) => r.id === "outdoor-worker-protection")).toBe(true);
+    expect(recs.some((r) => r.id === "two-wheeler-protection")).toBe(true);
+    expect(recs.some((r) => r.id === "cooking-exhaust-control" && r.urgency === "critical")).toBe(
+      true
+    );
+
+    const carProfile = {
+      ...DEFAULT_USER_PROFILE,
+      commute: "car" as const,
+    };
+    const carRecs = generateRecommendations(POOR_AIR_FIXTURE, carProfile);
+    expect(carRecs.some((r) => r.id === "car-recirculate-carpool")).toBe(true);
+  });
 });

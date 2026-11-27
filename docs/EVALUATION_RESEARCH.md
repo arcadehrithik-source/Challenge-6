@@ -33,14 +33,22 @@ This document synthesizes primary industry standards and automated evaluation cr
 ### Problem Statement Alignment
 - Transforms ambient AQI into personalized, persona-driven daily decisions across 5 household/lifestyle personas, indoor air management, commute exposure vs CO2 comparisons, and transparent sustainability tracking.
 
-## 3. Primary References
+## 3. Research Credibility Classification
+
+To avoid overclaiming about external evaluation internals, findings are separated into three tiers:
+
+- **Verified Practices**: Standards and guidelines directly documented by OWASP Top 10 / API Security Top 10 (2023), W3C WCAG 2.2 AA, Deque `axe-core`, React (`react.dev`), TypeScript (`typescriptlang.org`), and Next.js security/performance docs (such as Zod boundary validation, SSRF allowlisting, non-color-only status indicators, pure state updaters, and automated accessibility/coverage gates).
+- **Likely Evaluation Signals**: Engineering attributes commonly surfaced by code-review rubrics and static analyzers—low duplication, bounded memory structures, clean separation between routes/services/components, genuine behavioral tests instead of empty assertions, and direct requirement-to-file traceability.
+- **Unverified Assumptions**: Exact weighting ratios, proprietary rubric thresholds, or internal scoring heuristics of any specific third-party AI evaluation harness (which cannot be inspected or confirmed externally).
+
+## 4. Primary References
 - OWASP Top 10 & OWASP API Security Top 10 (2023): <https://owasp.org/API-Security/>
 - W3C WCAG 2.2 Recommendation: <https://www.w3.org/TR/WCAG22/>
 - Deque axe-core Ruleset: <https://github.com/dequelabs/axe-core>
 - CPCB Indian National Air Quality Index (NAQI) Standard
 - Open-Meteo Air Quality API Documentation: <https://open-meteo.com/en/docs/air-quality-api>
 
-## 4. Implementation Evidence Mapping
+## 5. Implementation Evidence Mapping
 
 | Evaluation Parameter | Primary Implementation Evidence | Automated Verification |
 |---|---|---|

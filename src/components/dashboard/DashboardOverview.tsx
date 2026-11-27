@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Sparkles, Wind } from "lucide-react";
@@ -38,12 +39,16 @@ export function DashboardOverview() {
     setAssistantOpen,
   } = useBreatheWise();
 
-  const impact = calculateImpactMetrics({
-    checklist,
-    commuteMode: profile.commute,
-    commuteDistanceKm: profile.commuteDistanceKm,
-    streakDays,
-  });
+  const impact = useMemo(
+    () =>
+      calculateImpactMetrics({
+        checklist,
+        commuteMode: profile.commute,
+        commuteDistanceKm: profile.commuteDistanceKm,
+        streakDays,
+      }),
+    [checklist, profile.commute, profile.commuteDistanceKm, streakDays]
+  );
 
   return (
     <div className="space-y-6">

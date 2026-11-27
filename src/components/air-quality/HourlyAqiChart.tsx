@@ -104,6 +104,46 @@ export function HourlyAqiChart({
             {dataMode === "live" ? "Observed + Forecast (Open-Meteo)" : "Simulated Demonstration"}
           </div>
         </div>
+
+        <details className="mt-3 rounded-xl border border-[#e3ece6] bg-[#f8fbf9] px-3 py-2 text-xs text-[#30443c]">
+          <summary className="cursor-pointer font-semibold text-[#10201a]">
+            View hourly measurements table ({hourly.length} hours)
+          </summary>
+          <div className="mt-2 max-h-56 overflow-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-[#dce5df] text-[#4b5e56]">
+                  <th scope="col" className="py-1.5 pr-3 font-semibold">
+                    Time
+                  </th>
+                  <th scope="col" className="py-1.5 pr-3 font-semibold">
+                    Indian NAQI
+                  </th>
+                  <th scope="col" className="py-1.5 pr-3 font-semibold">
+                    PM2.5 (µg/m³)
+                  </th>
+                  <th scope="col" className="py-1.5 pr-3 font-semibold">
+                    PM10 (µg/m³)
+                  </th>
+                  <th scope="col" className="py-1.5 font-semibold">
+                    Source Type
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {hourly.map((pt) => (
+                  <tr key={pt.time} className="border-b border-[#edf3ef] last:border-0">
+                    <td className="py-1.5 pr-3 font-medium text-[#10201a]">{pt.label}</td>
+                    <td className="py-1.5 pr-3">{pt.aqi}</td>
+                    <td className="py-1.5 pr-3">{pt.pm25 !== null ? pt.pm25.toFixed(1) : "N/A"}</td>
+                    <td className="py-1.5 pr-3">{pt.pm10 !== null ? pt.pm10.toFixed(1) : "N/A"}</td>
+                    <td className="py-1.5 capitalize">{pt.observationType}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
       </CardContent>
     </Card>
   );
