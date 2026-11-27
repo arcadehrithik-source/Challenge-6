@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const aqiCategorySchema = z.enum([
+const aqiCategorySchema = z.enum([
   "Good",
   "Satisfactory",
   "Moderate",
@@ -9,7 +9,9 @@ export const aqiCategorySchema = z.enum([
   "Severe",
 ]);
 
-export const householdTypeSchema = z.enum([
+const pollutantCodeSchema = z.enum(["PM2.5", "PM10", "NO2", "O3"]);
+
+const householdTypeSchema = z.enum([
   "individual",
   "couple",
   "family",
@@ -17,7 +19,7 @@ export const householdTypeSchema = z.enum([
   "household_with_seniors",
 ]);
 
-export const lifestyleTypeSchema = z.enum([
+const lifestyleTypeSchema = z.enum([
   "student",
   "office_commuter",
   "remote_worker",
@@ -25,7 +27,7 @@ export const lifestyleTypeSchema = z.enum([
   "fitness_enthusiast",
 ]);
 
-export const commuteModeSchema = z.enum([
+const commuteModeSchema = z.enum([
   "walking",
   "bicycle",
   "public_transport",
@@ -34,26 +36,22 @@ export const commuteModeSchema = z.enum([
   "work_from_home",
 ]);
 
-export const cookingFuelSchema = z.enum([
-  "lpg_png",
-  "electric_induction",
-  "solid_biomass_kerosene",
-]);
+const cookingFuelSchema = z.enum(["lpg_png", "electric_induction", "solid_biomass_kerosene"]);
 
-export const ventilationLevelSchema = z.enum(["cross_ventilated", "moderate", "sealed_limited"]);
+const ventilationLevelSchema = z.enum(["cross_ventilated", "moderate", "sealed_limited"]);
 
-export const budgetPreferenceSchema = z.enum(["zero_low_cost", "moderate", "flexible"]);
+const budgetPreferenceSchema = z.enum(["zero_low_cost", "moderate", "flexible"]);
 
-export const sustainabilityPrioritySchema = z.enum([
+const sustainabilityPrioritySchema = z.enum([
   "protect_health",
   "reduce_emissions",
   "save_energy",
   "low_cost_living",
 ]);
 
-export const demoScenarioSchema = z.enum(["auto", "good", "moderate", "poor", "severe"]);
+const demoScenarioSchema = z.enum(["auto", "good", "moderate", "poor", "severe"]);
 
-export const indoorEnvironmentSchema = z.object({
+const indoorEnvironmentSchema = z.object({
   hasAirPurifier: z.boolean(),
   hasIndoorPlants: z.boolean(),
   windowsFrequentlyOpen: z.boolean(),
@@ -61,7 +59,7 @@ export const indoorEnvironmentSchema = z.object({
   ventilation: ventilationLevelSchema,
 });
 
-export const userPreferencesSchema = z.object({
+const userPreferencesSchema = z.object({
   dailyNotifications: z.boolean(),
   notificationTime: z
     .string()
@@ -70,6 +68,18 @@ export const userPreferencesSchema = z.object({
   sustainabilityPriority: sustainabilityPrioritySchema,
   budget: budgetPreferenceSchema,
 });
+
+/**
+ * Normalizes blank query strings to undefined before coercing to a finite bounded number,
+ * preventing empty strings (?lat=&lon=) from coercing to 0.
+ */
+function optionalBoundedQueryNumber(min: number, max: number) {
+  return z.preprocess((value) => {
+    if (value === undefined || value === null) return undefined;
+    if (typeof value === "string" && value.trim() === "") return undefined;
+    return value;
+  }, z.coerce.number().finite().min(min).max(max).optional());
+}
 
 export const userProfileSchema = z.object({
   city: z
@@ -84,12 +94,12 @@ export const userProfileSchema = z.object({
     .max(100, "Locality must be 100 characters or fewer.")
     .optional()
     .default(""),
-  latitude: z.number().min(-90).max(90).optional(),
-  longitude: z.number().min(-180).max(180).optional(),
+  latitude: z.number().finite().min(-90).max(90).optional(),
+  longitude: z.number().finite().min(-180).max(180).optional(),
   household: householdTypeSchema,
   lifestyle: lifestyleTypeSchema,
   commute: commuteModeSchema,
-  commuteDistanceKm: z.number().min(0).max(120).default(8),
+  commuteDistanceKm: z.number().finite().min(0).max(120).default(8),
   indoorEnvironment: indoorEnvironmentSchema,
   preferences: userPreferencesSchema,
   demoScenario: demoScenarioSchema.optional().default("auto"),
@@ -104,10 +114,40 @@ export const airQualityQuerySchema = z.object({
     .max(80)
     .regex(/^[a-zA-Z\s.,-]+$/),
   locality: z.string().trim().max(100).optional(),
-  lat: z.coerce.number().min(-90).max(90).optional(),
-  lon: z.coerce.number().min(-180).max(180).optional(),
+  lat: optionalBoundedQueryNumber(-90, 90),
+  lon: optionalBoundedQueryNumber(-180, 180),
   mode: z.enum(["live", "demo"]).optional().default("live"),
   scenario: demoScenarioSchema.optional().default("auto"),
+});
+
+export const airQualitySnapshotSchema = z.object({
+  city: z.string().min(1),
+  locality: z.string().optional(),
+  latitude: z.number().finite().min(-90).max(90),
+  longitude: z.number().finite().min(-180).max(180),
+  aqi: z.number().finite().min(0).max(500),
+  category: aqiCategorySchema,
+  pm25: z.number().finite().nullable(),
+  pm10: z.number().finite().nullable(),
+  no2: z.number().finite().nullable(),
+  o3: z.number().finite().nullable(),
+  mainPollutant: pollutantCodeSchema,
+  healthAdvisory: z.string(),
+  dataSource: z.string(),
+  dataMode: z.enum(["live", "demo"]),
+  updatedAt: z.string(),
+  hourly: z.array(
+    z.object({
+      time: z.string(),
+      label: z.string(),
+      aqi: z.number().finite().min(0).max(500),
+      pm25: z.number().finite().nullable(),
+      pm10: z.number().finite().nullable(),
+      observationType: z.enum(["observed", "forecast", "simulated"]),
+    })
+  ),
+  isFallback: z.boolean(),
+  fallbackReason: z.string().optional(),
 });
 
 export const assistantRequestSchema = z.object({
@@ -118,16 +158,16 @@ export const assistantRequestSchema = z.object({
     .max(600, "Question must be 600 characters or fewer."),
   context: z.object({
     location: z.string().trim().min(2).max(120),
-    aqi: z.number().min(0).max(500),
+    aqi: z.number().finite().min(0).max(500),
     aqiCategory: aqiCategorySchema,
-    pm25: z.number().min(0).max(2000).nullable(),
-    pm10: z.number().min(0).max(2000).nullable(),
+    pm25: z.number().finite().min(0).max(2000).nullable(),
+    pm10: z.number().finite().min(0).max(2000).nullable(),
     dataMode: z.enum(["live", "demo"]),
     updatedAt: z.string().trim().max(64),
     household: householdTypeSchema,
     lifestyle: lifestyleTypeSchema,
     commute: commuteModeSchema,
-    commuteDistanceKm: z.number().min(0).max(120).optional().default(8),
+    commuteDistanceKm: z.number().finite().min(0).max(120).optional().default(8),
     indoorEnvironment: indoorEnvironmentSchema,
     preferences: userPreferencesSchema.omit({ notificationTime: true }),
   }),

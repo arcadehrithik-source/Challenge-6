@@ -10,6 +10,42 @@ import { Card, CardContent } from "@/components/ui/card";
 import { HeroVisual } from "./HeroVisual";
 import { FEATURE_CARDS, LANDING_NAV_LINKS, PROBLEM_CARDS, WORKFLOW_STEPS } from "./landing-content";
 
+function PrimaryCtaActions({
+  secondaryHref,
+  secondaryLabel,
+  secondaryVariant,
+  centered = false,
+}: {
+  secondaryHref: string;
+  secondaryLabel: string;
+  secondaryVariant: "outline" | "secondary";
+  centered?: boolean;
+}) {
+  return (
+    <div
+      className={
+        centered
+          ? "mt-7 flex flex-wrap justify-center gap-3"
+          : "mt-8 flex flex-wrap items-center gap-3.5"
+      }
+    >
+      <Button size="lg" asChild>
+        <Link href="/onboarding">
+          Build My Air Quality Plan
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      </Button>
+      <Button size="lg" variant={secondaryVariant} asChild>
+        {secondaryHref.startsWith("#") ? (
+          <a href={secondaryHref}>{secondaryLabel}</a>
+        ) : (
+          <Link href={secondaryHref}>{secondaryLabel}</Link>
+        )}
+      </Button>
+    </div>
+  );
+}
+
 export function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -108,17 +144,11 @@ export function LandingPage() {
                 create.&rdquo;
               </p>
 
-              <div className="mt-8 flex flex-wrap items-center gap-3.5">
-                <Button size="lg" asChild>
-                  <Link href="/onboarding">
-                    Build My Air Quality Plan
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </Link>
-                </Button>
-                <Button size="lg" variant="outline" asChild>
-                  <a href="#features">Explore Features</a>
-                </Button>
-              </div>
+              <PrimaryCtaActions
+                secondaryHref="#features"
+                secondaryLabel="Explore Features"
+                secondaryVariant="outline"
+              />
 
               <dl className="mt-10 grid grid-cols-3 gap-4 border-t border-[#dce5df] pt-6">
                 <div>
@@ -313,17 +343,12 @@ export function LandingPage() {
               Set up your city, household, and commute in under a minute—saved locally in your
               browser with zero unnecessary data collection.
             </p>
-            <div className="mt-7 flex flex-wrap justify-center gap-3">
-              <Button size="lg" asChild>
-                <Link href="/onboarding">
-                  Build My Air Quality Plan
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="secondary" asChild>
-                <Link href="/dashboard">Explore Live Prototype Dashboard</Link>
-              </Button>
-            </div>
+            <PrimaryCtaActions
+              secondaryHref="/dashboard"
+              secondaryLabel="Explore Live Prototype Dashboard"
+              secondaryVariant="secondary"
+              centered
+            />
           </div>
         </section>
       </main>

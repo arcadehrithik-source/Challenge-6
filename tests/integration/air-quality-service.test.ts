@@ -89,4 +89,39 @@ describe("Air Quality Service integration", () => {
     // Only 1 geocoding + 1 air-quality fetch despite 2 concurrent calls
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("evicts expired cache entries after TTL and rejects non-finite or out-of-range coordinates", async () => {
+    const nowSpy = vi.spyOn(Date, "now");
+    nowSpy.mockReturnValue(1_000_000);
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => MOCK_OPEN_METEO_RESPONSE,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getAirQualitySnapshot({ city: "Kolkata", mode: "live" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Advance past 10-minute TTL
+    nowSpy.mockReturnValue(1_000_000 + 11 * 60 * 1000);
+    await getAirQualitySnapshot({ city: "Kolkata", mode: "live" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Non-finite or out-of-range upstream coordinates should trigger clean demo fallback
+    clearAirQualityCache();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          ...MOCK_OPEN_METEO_RESPONSE,
+          latitude: 999,
+        }),
+      })
+    );
+    const invalidRes = await getAirQualitySnapshot({ city: "Kolkata", mode: "live" });
+    expect(invalidRes.isFallback).toBe(true);
+    expect(invalidRes.dataMode).toBe("demo");
+  });
 });

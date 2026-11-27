@@ -1,28 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Award, Flame, Leaf } from "lucide-react";
 import { useBreatheWise } from "@/components/providers/BreatheWiseProvider";
 import { SafetyChecklistCard } from "@/components/recommendations/SafetyChecklistCard";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { calculateImpactMetrics } from "@/lib/commute-impact";
 
 export function ImpactTrackerModule() {
-  const { checklist, profile, streakDays, toggleChecklistItem } = useBreatheWise();
+  const { checklist, impact: metrics, toggleChecklistItem } = useBreatheWise();
   const [timeframe, setTimeframe] = useState<"weekly" | "monthly">("weekly");
-
-  const metrics = useMemo(
-    () =>
-      calculateImpactMetrics({
-        checklist,
-        commuteMode: profile.commute,
-        commuteDistanceKm: profile.commuteDistanceKm,
-        streakDays,
-      }),
-    [checklist, profile.commute, profile.commuteDistanceKm, streakDays]
-  );
 
   const multiplier = timeframe === "monthly" ? 4 : 1;
   const displayedCo2 = Number((metrics.estimatedCo2AvoidedKg * multiplier).toFixed(2));

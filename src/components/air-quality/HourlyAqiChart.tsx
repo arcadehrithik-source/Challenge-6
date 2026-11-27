@@ -13,6 +13,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { HourlyAirQualityPoint } from "@/lib/types";
 
+function readObservationType(payload: unknown): string | undefined {
+  if (!payload || typeof payload !== "object" || !("observationType" in payload)) {
+    return undefined;
+  }
+  const value = payload.observationType;
+  return typeof value === "string" ? value : undefined;
+}
+
 export function HourlyAqiChart({
   hourly,
   dataMode,
@@ -74,7 +82,7 @@ export function HourlyAqiChart({
                   fontSize: "12px",
                 }}
                 formatter={(value: number, _name: string, item) => {
-                  const obs = (item?.payload as HourlyAirQualityPoint | undefined)?.observationType;
+                  const obs = readObservationType(item?.payload);
                   return [`AQI ${value} (${obs ?? dataMode})`, "Indian NAQI"];
                 }}
               />

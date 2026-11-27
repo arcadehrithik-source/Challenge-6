@@ -59,19 +59,18 @@ export function OnboardingWizard() {
     }
   }, [isHydrated, profile, form]);
 
-  const watchedValues = useWatch({ control: form.control }) as Partial<OnboardingFormValues>;
+  const watchedValues = useWatch({ control: form.control });
   const currentStep = STEPS[stepIdx]!;
   const progressValue = ((stepIdx + 1) / STEPS.length) * 100;
 
+  async function validateStep(index: number): Promise<boolean> {
+    if (index === 0) return form.trigger(["city", "locality"]);
+    if (index === 3) return form.trigger(["commute", "commuteDistanceKm"]);
+    return true;
+  }
+
   async function handleNext() {
-    if (stepIdx === 0) {
-      const valid = await form.trigger(["city", "locality"]);
-      if (!valid) return;
-    }
-    if (stepIdx === 3) {
-      const valid = await form.trigger(["commute", "commuteDistanceKm"]);
-      if (!valid) return;
-    }
+    if (!(await validateStep(stepIdx))) return;
     if (stepIdx < STEPS.length - 1) {
       setStepIdx((i) => i + 1);
     }

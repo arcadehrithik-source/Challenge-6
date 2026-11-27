@@ -10,6 +10,8 @@ import React, {
   useState,
 } from "react";
 import { MotionConfig } from "framer-motion";
+import { buildDemoAirQualitySnapshot } from "@/lib/air-quality-service";
+import { calculateImpactMetrics } from "@/lib/commute-impact";
 import {
   buildDefaultChecklist,
   computeExposureIndicator,
@@ -17,7 +19,7 @@ import {
   generateDailySlotPlan,
   generateRecommendations,
 } from "@/lib/recommendation-engine";
-import { buildDemoAirQualitySnapshot } from "@/lib/air-quality-service";
+import { airQualitySnapshotSchema } from "@/lib/schemas";
 import {
   loadChecklistState,
   loadDataMode,
@@ -33,6 +35,7 @@ import type {
   ChecklistItem,
   DailySlotPlan,
   ExposureIndicator,
+  ImpactMetrics,
   Recommendation,
   UserProfile,
 } from "@/lib/types";
@@ -54,6 +57,7 @@ interface BreatheWiseContextValue {
   exposure: ExposureIndicator;
   dailyPlan: DailySlotPlan[];
   checklist: ChecklistItem[];
+  impact: ImpactMetrics;
   streakDays: number;
   assistantOpen: boolean;
   setAssistantOpen: (open: boolean) => void;
@@ -66,6 +70,25 @@ interface BreatheWiseContextValue {
 }
 
 const BreatheWiseContext = createContext<BreatheWiseContextValue | null>(null);
+
+function buildAirQualitySearchParams(
+  targetProfile: UserProfile,
+  targetMode: "live" | "demo"
+): URLSearchParams {
+  const params = new URLSearchParams({
+    city: targetProfile.city,
+    mode: targetMode,
+    scenario: targetProfile.demoScenario ?? "auto",
+  });
+  if (targetProfile.locality) {
+    params.set("locality", targetProfile.locality);
+  }
+  if (typeof targetProfile.latitude === "number" && typeof targetProfile.longitude === "number") {
+    params.set("lat", String(targetProfile.latitude));
+    params.set("lon", String(targetProfile.longitude));
+  }
+  return params;
+}
 
 export function BreatheWiseProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_USER_PROFILE);
@@ -112,31 +135,32 @@ export function BreatheWiseProvider({ children }: { children: React.ReactNode })
     async (targetProfile: UserProfile, targetMode: "live" | "demo") => {
       setIsLoadingAirQuality(true);
       setAirQualityError(null);
-      try {
-        const params = new URLSearchParams({
+      setAirQuality((prev) => {
+        if (prev.city.toLowerCase() === targetProfile.city.trim().toLowerCase()) {
+          return prev;
+        }
+        return buildDemoAirQualitySnapshot({
           city: targetProfile.city,
-          mode: targetMode,
+          locality: targetProfile.locality,
+          latitude: targetProfile.latitude,
+          longitude: targetProfile.longitude,
           scenario: targetProfile.demoScenario ?? "auto",
+          reason: `Loading air quality data for ${targetProfile.city}...`,
         });
-        if (targetProfile.locality) {
-          params.set("locality", targetProfile.locality);
-        }
-        if (
-          typeof targetProfile.latitude === "number" &&
-          typeof targetProfile.longitude === "number"
-        ) {
-          params.set("lat", String(targetProfile.latitude));
-          params.set("lon", String(targetProfile.longitude));
-        }
-
+      });
+      try {
+        const params = buildAirQualitySearchParams(targetProfile, targetMode);
         const res = await fetch(`/api/air-quality?${params.toString()}`, {
           cache: "no-store",
         });
         if (!res.ok) {
           throw new Error(`Air quality service returned ${res.status}`);
         }
-        const data = (await res.json()) as AirQualitySnapshot;
-        setAirQuality(data);
+        const parsed = airQualitySnapshotSchema.safeParse(await res.json());
+        if (!parsed.success) {
+          throw new Error("Unexpected air quality payload shape.");
+        }
+        setAirQuality(parsed.data);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unable to load air quality data.";
         setAirQualityError(message);
@@ -226,6 +250,17 @@ export function BreatheWiseProvider({ children }: { children: React.ReactNode })
     }));
   }, [airQuality, checklistMap, profile]);
 
+  const impact = useMemo(
+    () =>
+      calculateImpactMetrics({
+        checklist,
+        commuteMode: profile.commute,
+        commuteDistanceKm: profile.commuteDistanceKm,
+        streakDays,
+      }),
+    [checklist, profile.commute, profile.commuteDistanceKm, streakDays]
+  );
+
   const toggleChecklistItem = useCallback(
     (id: string) => {
       const nextMap = { ...checklistMap, [id]: !checklistMap[id] };
@@ -262,6 +297,7 @@ export function BreatheWiseProvider({ children }: { children: React.ReactNode })
       exposure,
       dailyPlan,
       checklist,
+      impact,
       streakDays,
       assistantOpen,
       setAssistantOpen,
@@ -283,6 +319,7 @@ export function BreatheWiseProvider({ children }: { children: React.ReactNode })
       exposure,
       dailyPlan,
       checklist,
+      impact,
       streakDays,
       assistantOpen,
       updateProfile,

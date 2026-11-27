@@ -19,7 +19,7 @@ const serverEnvSchema = z.object({
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 });
 
-export type ServerEnv = z.infer<typeof serverEnvSchema>;
+type ServerEnv = z.infer<typeof serverEnvSchema>;
 
 let cachedEnv: ServerEnv | null = null;
 

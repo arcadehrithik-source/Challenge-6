@@ -1,4 +1,4 @@
-export interface CityPreset {
+interface CityPreset {
   name: string;
   state: string;
   latitude: number;

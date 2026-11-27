@@ -167,4 +167,22 @@ describe("API Route validation, fallback, and rate limiting", () => {
     expect(limitedRes.status).toBe(429);
     expect(limitedRes.headers.get("X-RateLimit-Limit")).toBe("45");
   });
+
+  it("GET /api/air-quality ignores blank lat/lon query strings and skips public CDN cache on fallback", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error("Upstream offline"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const req = new NextRequest("http://localhost:3000/api/air-quality?city=Delhi&lat=&lon=");
+    const res = await getAirQuality(req);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+
+    const data = await res.json();
+    expect(data.city).toBe("Delhi");
+    // Must not coerce empty ?lat=&lon= into 0, 0
+    expect(data.latitude).not.toBe(0);
+    expect(data.longitude).not.toBe(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("latitude=28.6139");
+  });
 });

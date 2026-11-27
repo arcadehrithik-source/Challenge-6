@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { userProfileSchema } from "@/lib/schemas";
+import { airQualityQuerySchema, userProfileSchema } from "@/lib/schemas";
 import { isAllowedExternalUrl } from "@/lib/security/env";
 import {
   detectPromptInjection,
@@ -53,5 +53,25 @@ describe("Security validation & sanitization", () => {
     );
     expect(isAllowedExternalUrl("http://169.254.169.254/latest/meta-data/")).toBe(false);
     expect(isAllowedExternalUrl("https://evil.example.com/steal")).toBe(false);
+  });
+
+  it("normalizes empty/null optional coordinates without coercing blanks to zero", () => {
+    const blankCoords = airQualityQuerySchema.parse({
+      city: "Delhi",
+      lat: "",
+      lon: null,
+    });
+    expect(blankCoords.lat).toBeUndefined();
+    expect(blankCoords.lon).toBeUndefined();
+
+    const validCoords = airQualityQuerySchema.parse({
+      city: "EquatorialTest",
+      lat: "0",
+      lon: "0",
+    });
+    expect(validCoords.lat).toBe(0);
+    expect(validCoords.lon).toBe(0);
+
+    expect(airQualityQuerySchema.safeParse({ city: "Delhi", lat: "Infinity" }).success).toBe(false);
   });
 });

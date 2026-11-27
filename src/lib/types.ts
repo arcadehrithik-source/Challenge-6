@@ -2,9 +2,9 @@ export type AqiCategory = "Good" | "Satisfactory" | "Moderate" | "Poor" | "Very 
 
 export type PollutantCode = "PM2.5" | "PM10" | "NO2" | "O3";
 
-export type DataSourceMode = "live" | "demo";
+type DataSourceMode = "live" | "demo";
 
-export type ObservationType = "observed" | "forecast" | "simulated";
+type ObservationType = "observed" | "forecast" | "simulated";
 
 export type DemoScenario = "auto" | "good" | "moderate" | "poor" | "severe";
 
@@ -38,25 +38,25 @@ export interface AirQualitySnapshot {
   fallbackReason?: string;
 }
 
-export type HouseholdType =
+type HouseholdType =
   "individual" | "couple" | "family" | "family_with_children" | "household_with_seniors";
 
-export type LifestyleType =
+type LifestyleType =
   "student" | "office_commuter" | "remote_worker" | "outdoor_worker" | "fitness_enthusiast";
 
 export type CommuteMode =
   "walking" | "bicycle" | "public_transport" | "two_wheeler" | "car" | "work_from_home";
 
-export type CookingFuel = "lpg_png" | "electric_induction" | "solid_biomass_kerosene";
+type CookingFuel = "lpg_png" | "electric_induction" | "solid_biomass_kerosene";
 
-export type VentilationLevel = "cross_ventilated" | "moderate" | "sealed_limited";
+type VentilationLevel = "cross_ventilated" | "moderate" | "sealed_limited";
 
-export type BudgetPreference = "zero_low_cost" | "moderate" | "flexible";
+type BudgetPreference = "zero_low_cost" | "moderate" | "flexible";
 
-export type SustainabilityPriority =
+type SustainabilityPriority =
   "protect_health" | "reduce_emissions" | "save_energy" | "low_cost_living";
 
-export interface IndoorEnvironmentProfile {
+interface IndoorEnvironmentProfile {
   hasAirPurifier: boolean;
   hasIndoorPlants: boolean;
   windowsFrequentlyOpen: boolean;
@@ -64,7 +64,7 @@ export interface IndoorEnvironmentProfile {
   ventilation: VentilationLevel;
 }
 
-export interface UserPreferences {
+interface UserPreferences {
   dailyNotifications: boolean;
   notificationTime: string;
   sustainabilityPriority: SustainabilityPriority;
@@ -86,7 +86,7 @@ export interface UserProfile {
   updatedAt: string;
 }
 
-export type RecommendationUrgency = "critical" | "high" | "medium" | "low";
+type RecommendationUrgency = "critical" | "high" | "medium" | "low";
 export type RecommendationCategory =
   "outdoor" | "indoor" | "commute" | "sustainability" | "household";
 

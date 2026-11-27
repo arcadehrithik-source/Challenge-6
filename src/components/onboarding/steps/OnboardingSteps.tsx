@@ -10,9 +10,19 @@ import type { UserProfile } from "@/lib/types";
 
 export type OnboardingFormValues = z.input<typeof userProfileSchema>;
 
+type WatchedOnboardingValues = Partial<{
+  city: string;
+  locality: string;
+  household: UserProfile["household"];
+  lifestyle: UserProfile["lifestyle"];
+  commute: UserProfile["commute"];
+  commuteDistanceKm: number;
+  indoorEnvironment: Partial<UserProfile["indoorEnvironment"]>;
+}>;
+
 interface StepProps {
   form: UseFormReturn<OnboardingFormValues>;
-  watchedValues: Partial<OnboardingFormValues>;
+  watchedValues: WatchedOnboardingValues;
 }
 
 interface CardOption<T extends string> {

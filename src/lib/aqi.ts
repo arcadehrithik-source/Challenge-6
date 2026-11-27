@@ -45,7 +45,7 @@ const O3_BREAKPOINTS: Breakpoint[] = [
 ];
 
 function computeSubIndex(concentration: number | null, table: Breakpoint[]): number | null {
-  if (concentration === null || Number.isNaN(concentration) || concentration < 0) {
+  if (concentration === null || !Number.isFinite(concentration) || concentration < 0) {
     return null;
   }
 
@@ -104,7 +104,7 @@ export function getAqiCategory(aqi: number): AqiCategory {
   return "Severe";
 }
 
-export interface AqiCategoryMeta {
+interface AqiCategoryMeta {
   category: AqiCategory;
   range: string;
   shortAction: string;

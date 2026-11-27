@@ -51,10 +51,21 @@ describe("Context-aware recommendation engine", () => {
     expect(recs.some((r) => r.id === "ventilation-healthy-flush")).toBe(true);
   });
 
-  it("computes exposure indicator with explicit non-medical disclaimer", () => {
+  it("computes exposure indicator across Low, Elevated, and Critical levels with disclaimer", () => {
     const severeExp = computeExposureIndicator(SEVERE_AIR_FIXTURE, CYCLIST_PROFILE_FIXTURE);
-    const goodExp = computeExposureIndicator(GOOD_AIR_FIXTURE, DEFAULT_USER_PROFILE);
+    const elevatedExp = computeExposureIndicator(
+      { ...POOR_AIR_FIXTURE, aqi: 220, category: "Poor" },
+      { ...DEFAULT_USER_PROFILE, commute: "public_transport", household: "family_with_children" }
+    );
+    const goodExp = computeExposureIndicator(GOOD_AIR_FIXTURE, {
+      ...DEFAULT_USER_PROFILE,
+      commute: "work_from_home",
+      household: "individual",
+    });
 
+    expect(severeExp.level).toBe("Critical");
+    expect(elevatedExp.level).toBe("Elevated");
+    expect(goodExp.level).toBe("Low");
     expect(severeExp.score).toBeGreaterThan(goodExp.score);
     expect(severeExp.disclaimer.toLowerCase()).toContain("not a medical diagnosis");
   });

@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { assistantStructuredResponseSchema } from "@/lib/schemas";
 import type { AssistantStructuredResponse } from "@/lib/types";
 
 const SAMPLE_PROMPTS = [
@@ -72,12 +73,33 @@ export function BreatheWiseAssistantDialog() {
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Unable to generate response.");
+      const rawText = await res.text();
+      let payload: unknown = null;
+      if (rawText) {
+        try {
+          payload = JSON.parse(rawText);
+        } catch {
+          throw new Error("Assistant service returned an unreadable response.");
+        }
       }
 
-      setResponse(data as AssistantStructuredResponse);
+      if (!res.ok) {
+        const errMsg =
+          payload &&
+          typeof payload === "object" &&
+          "error" in payload &&
+          typeof payload.error === "string"
+            ? payload.error
+            : "Unable to generate response.";
+        throw new Error(errMsg);
+      }
+
+      const validated = assistantStructuredResponseSchema.safeParse(payload);
+      if (!validated.success) {
+        throw new Error("Assistant response did not match the expected structure.");
+      }
+
+      setResponse(validated.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed.");
     } finally {

@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test tests/e2e",
-    "test:a11y": "playwright test tests/accessibility --project=chromium",
+    "test:a11y": "playwright test tests/accessibility",
     "audit": "npm audit --audit-level=high"
   },
   "dependencies": {

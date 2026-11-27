@@ -26,13 +26,18 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
+    const rawCity = searchParams.get("city")?.trim();
+    const rawLocality = searchParams.get("locality")?.trim();
+    const rawLat = searchParams.get("lat")?.trim();
+    const rawLon = searchParams.get("lon")?.trim();
+
     const parsed = airQualityQuerySchema.safeParse({
-      city: searchParams.get("city") ?? "Kolkata",
-      locality: searchParams.get("locality") ?? undefined,
-      lat: searchParams.get("lat") ?? undefined,
-      lon: searchParams.get("lon") ?? undefined,
-      mode: searchParams.get("mode") ?? "live",
-      scenario: searchParams.get("scenario") ?? "auto",
+      city: rawCity || "Kolkata",
+      locality: rawLocality || undefined,
+      lat: rawLat || undefined,
+      lon: rawLon || undefined,
+      mode: searchParams.get("mode")?.trim() || "live",
+      scenario: searchParams.get("scenario")?.trim() || "auto",
     });
 
     if (!parsed.success) {
@@ -54,10 +59,15 @@ export async function GET(request: NextRequest) {
       scenario: parsed.data.scenario,
     });
 
+    const cacheControl =
+      snapshot.isFallback || parsed.data.mode === "demo"
+        ? "no-store"
+        : "public, s-maxage=300, stale-while-revalidate=600";
+
     return NextResponse.json(snapshot, {
       status: 200,
       headers: {
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        "Cache-Control": cacheControl,
         ...rateLimitHeaders(rate, AIR_QUALITY_RATE_LIMIT),
       },
     });

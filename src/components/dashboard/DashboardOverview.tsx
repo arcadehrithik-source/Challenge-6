@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Sparkles, Wind } from "lucide-react";
@@ -12,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { calculateImpactMetrics } from "@/lib/commute-impact";
 import { formatEnumLabel, formatTimestamp } from "@/lib/utils";
 
 const HourlyAqiChart = dynamic(
@@ -34,21 +32,10 @@ export function DashboardOverview() {
     exposure,
     dailyPlan,
     checklist,
-    streakDays,
+    impact,
     toggleChecklistItem,
     setAssistantOpen,
   } = useBreatheWise();
-
-  const impact = useMemo(
-    () =>
-      calculateImpactMetrics({
-        checklist,
-        commuteMode: profile.commute,
-        commuteDistanceKm: profile.commuteDistanceKm,
-        streakDays,
-      }),
-    [checklist, profile.commute, profile.commuteDistanceKm, streakDays]
-  );
 
   return (
     <div className="space-y-6">

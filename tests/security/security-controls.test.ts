@@ -88,6 +88,18 @@ describe("Security controls & hardening verification", () => {
     const fallbackRes = await checkRateLimit("upstash-client", { limit: 10, windowMs: 60_000 });
     expect(fallbackRes.backend).toBe("single-instance-memory");
     expect(fallbackRes.allowed).toBe(true);
+
+    // Malformed Redis pipeline shape also falls back cleanly
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ unexpected: true }),
+      })
+    );
+    const badShapeRes = await checkRateLimit("upstash-client-2", { limit: 10, windowMs: 60_000 });
+    expect(badShapeRes.backend).toBe("single-instance-memory");
+    expect(badShapeRes.allowed).toBe(true);
   });
 
   it("bounds local rate limiter bucket storage against IP flood exhaustion", async () => {
