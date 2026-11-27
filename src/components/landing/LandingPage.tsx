@@ -5,12 +5,10 @@ import { ArrowRight, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/button";
+import { HeroSection } from "./HeroSection";
+import { WorkflowAndFooterSections } from "./ImpactFooterSections";
 import { LANDING_NAV_LINKS } from "./landing-content";
-import {
-  HeroSection,
-  ProblemAndFeaturesSections,
-  WorkflowAndFooterSections,
-} from "./LandingSections";
+import { ProblemAndFeaturesSections } from "./PlatformSections";
 
 /**
  * Product landing page introducing BreatheWise AI with responsive navigation

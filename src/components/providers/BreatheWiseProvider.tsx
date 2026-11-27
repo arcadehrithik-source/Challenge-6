@@ -2,7 +2,6 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { MotionConfig } from "framer-motion";
-import { buildDemoAirQualitySnapshot } from "@/lib/air-quality-service";
 import { calculateImpactMetrics } from "@/lib/commute-impact";
 import {
   buildDefaultChecklist,
@@ -11,7 +10,6 @@ import {
   generateDailySlotPlan,
   generateRecommendations,
 } from "@/lib/recommendation-engine";
-import { airQualitySnapshotSchema } from "@/lib/schemas";
 import {
   loadChecklistState,
   loadDataMode,
@@ -31,6 +29,7 @@ import type {
   Recommendation,
   UserProfile,
 } from "@/lib/types";
+import { useAirQualityFeed } from "./useAirQualityFeed";
 import { useToastQueue } from "./useToastQueue";
 
 interface BreatheWiseContextValue {
@@ -58,36 +57,6 @@ interface BreatheWiseContextValue {
 
 const BreatheWiseContext = createContext<BreatheWiseContextValue | null>(null);
 
-function buildAirQualitySearchParams(
-  targetProfile: UserProfile,
-  targetMode: "live" | "demo"
-): URLSearchParams {
-  const params = new URLSearchParams({
-    city: targetProfile.city,
-    mode: targetMode,
-    scenario: targetProfile.demoScenario ?? "auto",
-  });
-  if (targetProfile.locality) {
-    params.set("locality", targetProfile.locality);
-  }
-  if (typeof targetProfile.latitude === "number" && typeof targetProfile.longitude === "number") {
-    params.set("lat", String(targetProfile.latitude));
-    params.set("lon", String(targetProfile.longitude));
-  }
-  return params;
-}
-
-function buildPendingCitySnapshot(targetProfile: UserProfile): AirQualitySnapshot {
-  return buildDemoAirQualitySnapshot({
-    city: targetProfile.city,
-    locality: targetProfile.locality,
-    latitude: targetProfile.latitude,
-    longitude: targetProfile.longitude,
-    scenario: targetProfile.demoScenario ?? "auto",
-    reason: `Loading air quality data for ${targetProfile.city}...`,
-  });
-}
-
 /**
  * Root React context provider managing local user profile, live/demo AQI feed,
  * derived exposure/recommendation plans, checklist streaks, and status toasts.
@@ -96,59 +65,12 @@ export function BreatheWiseProvider({ children }: { children: React.ReactNode })
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_USER_PROFILE);
   const [dataMode, setDataMode] = useState<"live" | "demo">("live");
   const [isHydrated, setIsHydrated] = useState(false);
-  const [airQuality, setAirQuality] = useState<AirQualitySnapshot>(() =>
-    buildDemoAirQualitySnapshot({
-      city: DEFAULT_USER_PROFILE.city,
-      locality: DEFAULT_USER_PROFILE.locality,
-      scenario: "poor",
-      reason: "Initializing local air quality feed.",
-      referenceTimeIso: "2026-11-27T08:00:00.000Z",
-    })
-  );
-  const [isLoadingAirQuality, setIsLoadingAirQuality] = useState(false);
-  const [airQualityError, setAirQualityError] = useState<string | null>(null);
   const [checklistMap, setChecklistMap] = useState<Record<string, boolean>>({});
   const [streakDays, setStreakDays] = useState(0);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const { airQuality, isLoadingAirQuality, airQualityError, fetchSnapshot } =
+    useAirQualityFeed(DEFAULT_USER_PROFILE);
   const { toasts, notify } = useToastQueue();
-
-  const fetchSnapshot = useCallback(
-    async (targetProfile: UserProfile, targetMode: "live" | "demo") => {
-      setIsLoadingAirQuality(true);
-      setAirQualityError(null);
-      setAirQuality((prev) =>
-        prev.city.toLowerCase() === targetProfile.city.trim().toLowerCase()
-          ? prev
-          : buildPendingCitySnapshot(targetProfile)
-      );
-      try {
-        const params = buildAirQualitySearchParams(targetProfile, targetMode);
-        const res = await fetch(`/api/air-quality?${params.toString()}`, { cache: "no-store" });
-        if (!res.ok) {
-          throw new Error(`Air quality service returned ${res.status}`);
-        }
-        const parsed = airQualitySnapshotSchema.safeParse(await res.json());
-        if (!parsed.success) {
-          throw new Error("Unexpected air quality payload shape.");
-        }
-        setAirQuality(parsed.data);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unable to load air quality data.";
-        setAirQualityError(message);
-        setAirQuality(
-          buildDemoAirQualitySnapshot({
-            city: targetProfile.city,
-            locality: targetProfile.locality,
-            scenario: targetProfile.demoScenario ?? "auto",
-            reason: "Network fetch failed; showing clearly labeled Demonstration Mode.",
-          })
-        );
-      } finally {
-        setIsLoadingAirQuality(false);
-      }
-    },
-    []
-  );
 
   useEffect(() => {
     let active = true;

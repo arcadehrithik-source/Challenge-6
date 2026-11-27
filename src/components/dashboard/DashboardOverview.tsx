@@ -8,12 +8,8 @@ import { RecommendationCard } from "@/components/recommendations/RecommendationC
 import { SafetyChecklistCard } from "@/components/recommendations/SafetyChecklistCard";
 import { Button } from "@/components/ui/button";
 import { formatEnumLabel } from "@/lib/utils";
-import {
-  AirQualityOverviewCard,
-  DailyPlanGrid,
-  ImpactSummaryCard,
-  PersonalizedExposureCard,
-} from "./OverviewCards";
+import { DailyPlanGrid, ImpactSummaryCard } from "./OverviewBottomCards";
+import { AirQualityOverviewCard, PersonalizedExposureCard } from "./OverviewTopCards";
 
 const HourlyAqiChart = dynamic(
   () => import("@/components/air-quality/HourlyAqiChart").then((m) => m.HourlyAqiChart),

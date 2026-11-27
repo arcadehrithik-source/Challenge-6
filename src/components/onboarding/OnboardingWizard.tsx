@@ -10,19 +10,17 @@ import { Logo } from "@/components/layout/Logo";
 import { useBreatheWise } from "@/components/providers/BreatheWiseProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { userProfileSchema } from "@/lib/schemas";
 import type { UserProfile } from "@/lib/types";
 import { ONBOARDING_STEPS } from "./onboarding-config";
 import {
   type OnboardingFormValues,
-  StepCommute,
   StepHousehold,
-  StepIndoor,
   StepLifestyle,
   StepLocation,
-  StepPreferences,
-} from "./steps/OnboardingSteps";
+} from "./steps/StepLocationAndPersona";
+import { StepCommute, StepIndoor, StepPreferences } from "./steps/StepRoutineAndPreferences";
+import { WizardHeader } from "./WizardHeader";
 
 function renderOnboardingStep(
   stepIdx: number,
@@ -67,7 +65,6 @@ export function OnboardingWizard() {
 
   const watchedValues = useWatch({ control: form.control });
   const currentStep = ONBOARDING_STEPS[stepIdx] ?? ONBOARDING_STEPS[0];
-  const progressValue = ((stepIdx + 1) / ONBOARDING_STEPS.length) * 100;
 
   async function validateStep(index: number): Promise<boolean> {
     if (index === 0) return form.trigger(["city", "locality"]);
@@ -108,41 +105,7 @@ export function OnboardingWizard() {
         </header>
 
         <main>
-          <div className="mt-8">
-            <div className="flex items-center justify-between text-xs font-medium text-[#4b5e56]">
-              <span>
-                Step {stepIdx + 1} of {ONBOARDING_STEPS.length}: {currentStep.title}
-              </span>
-              <span>{Math.round(progressValue)}% complete</span>
-            </div>
-            <Progress value={progressValue} aria-label="Onboarding progress" className="mt-2" />
-
-            <nav aria-label="Onboarding steps" className="mt-4 hidden grid-cols-6 gap-2 sm:grid">
-              {ONBOARDING_STEPS.map((s, idx) => {
-                const Icon = s.icon;
-                const isActive = idx === stepIdx;
-                const isDone = idx < stepIdx;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    aria-current={isActive ? "step" : undefined}
-                    onClick={() => setStepIdx(idx)}
-                    className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors cursor-pointer ${
-                      isActive
-                        ? "border-[#0d3b2e] bg-[#0d3b2e] text-white"
-                        : isDone
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                          : "border-[#dce5df] bg-white text-[#4b5e56]"
-                    }`}
-                  >
-                    <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    <span className="truncate">{s.title}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
+          <WizardHeader stepIdx={stepIdx} onSelectStep={setStepIdx} />
 
           <Card className="mt-6">
             <CardContent className="p-6 sm:p-8">
