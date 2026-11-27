@@ -1,5 +1,6 @@
+import type { z } from "zod";
 import { generateRecommendations } from "./recommendation-engine";
-import { assistantStructuredResponseSchema } from "./schemas";
+import { assistantRequestSchema, assistantStructuredResponseSchema } from "./schemas";
 import { getServerEnv, isAllowedExternalUrl } from "./security/env";
 import {
   detectPromptInjection,
@@ -8,22 +9,35 @@ import {
 } from "./security/sanitize";
 import type { AirQualitySnapshot, AssistantStructuredResponse, UserProfile } from "./types";
 
-export interface AssistantQueryInput {
-  question: string;
-  context: {
-    location: string;
-    aqi: number;
-    aqiCategory: string;
-    pm25: number | null;
-    pm10: number | null;
-    dataMode: "live" | "demo";
-    updatedAt: string;
-    household: UserProfile["household"];
-    lifestyle: UserProfile["lifestyle"];
-    commute: UserProfile["commute"];
-    commuteDistanceKm: number;
-    indoorEnvironment: UserProfile["indoorEnvironment"];
-    preferences: Omit<UserProfile["preferences"], "notificationTime">;
+export type AssistantQueryInput = z.infer<typeof assistantRequestSchema>;
+
+function formatDataSourceTimestamp(context: AssistantQueryInput["context"]): string {
+  const source =
+    context.dataMode === "live" ? "Open-Meteo Air Quality API" : "Demonstration Mode Simulation";
+  return `${source} • Updated ${context.updatedAt}`;
+}
+
+function parseProviderJsonResponse(
+  rawJsonText: string,
+  providerUsed: string,
+  context: AssistantQueryInput["context"]
+): AssistantStructuredResponse {
+  const rawParsed = JSON.parse(rawJsonText) as Record<string, unknown>;
+  const validated = assistantStructuredResponseSchema.parse({
+    ...rawParsed,
+    dataSourceAndTimestamp: formatDataSourceTimestamp(context),
+    providerUsed,
+    isFallback: false,
+  });
+
+  return {
+    ...validated,
+    situationAssessment: sanitizeResponseText(validated.situationAssessment),
+    whatThisMeansForYou: sanitizeResponseText(validated.whatThisMeansForYou),
+    recommendedActions: validated.recommendedActions.map(sanitizeResponseText),
+    whyTheseActionsMatter: sanitizeResponseText(validated.whyTheseActionsMatter),
+    estimatedImpact: sanitizeResponseText(validated.estimatedImpact),
+    importantPrecautions: sanitizeResponseText(validated.importantPrecautions),
   };
 }
 
@@ -39,7 +53,7 @@ export function buildDeterministicAssistantResponse(
     latitude: 0,
     longitude: 0,
     aqi: context.aqi,
-    category: (context.aqiCategory as AirQualitySnapshot["category"]) || "Moderate",
+    category: context.aqiCategory,
     pm25: context.pm25,
     pm10: context.pm10,
     no2: null,
@@ -154,7 +168,7 @@ export function buildDeterministicAssistantResponse(
     whyTheseActionsMatter: sanitizeResponseText(whyTheseActionsMatter),
     estimatedImpact: sanitizeResponseText(estimatedImpact),
     importantPrecautions: sanitizeResponseText(importantPrecautions),
-    dataSourceAndTimestamp: `${context.dataMode === "live" ? "Open-Meteo Air Quality API" : "Demonstration Mode Simulation"} • Updated ${context.updatedAt}`,
+    dataSourceAndTimestamp: formatDataSourceTimestamp(context),
     providerUsed: "BreatheWise Deterministic Engine",
     isFallback: true,
   };
@@ -213,23 +227,7 @@ async function callOpenAI(
     throw new Error("Empty response from OpenAI");
   }
 
-  const rawParsed = JSON.parse(content) as Record<string, unknown>;
-  const validated = assistantStructuredResponseSchema.parse({
-    ...rawParsed,
-    dataSourceAndTimestamp: `${input.context.dataMode === "live" ? "Open-Meteo Air Quality API" : "Demonstration Mode"} • ${input.context.updatedAt}`,
-    providerUsed: `OpenAI (${model})`,
-    isFallback: false,
-  });
-
-  return {
-    ...validated,
-    situationAssessment: sanitizeResponseText(validated.situationAssessment),
-    whatThisMeansForYou: sanitizeResponseText(validated.whatThisMeansForYou),
-    recommendedActions: validated.recommendedActions.map(sanitizeResponseText),
-    whyTheseActionsMatter: sanitizeResponseText(validated.whyTheseActionsMatter),
-    estimatedImpact: sanitizeResponseText(validated.estimatedImpact),
-    importantPrecautions: sanitizeResponseText(validated.importantPrecautions),
-  };
+  return parseProviderJsonResponse(content, `OpenAI (${model})`, input.context);
 }
 
 async function callGemini(
@@ -278,23 +276,7 @@ async function callGemini(
     throw new Error("Empty response from Gemini");
   }
 
-  const rawParsed = JSON.parse(text) as Record<string, unknown>;
-  const validated = assistantStructuredResponseSchema.parse({
-    ...rawParsed,
-    dataSourceAndTimestamp: `${input.context.dataMode === "live" ? "Open-Meteo Air Quality API" : "Demonstration Mode"} • ${input.context.updatedAt}`,
-    providerUsed: `Google Gemini (${model})`,
-    isFallback: false,
-  });
-
-  return {
-    ...validated,
-    situationAssessment: sanitizeResponseText(validated.situationAssessment),
-    whatThisMeansForYou: sanitizeResponseText(validated.whatThisMeansForYou),
-    recommendedActions: validated.recommendedActions.map(sanitizeResponseText),
-    whyTheseActionsMatter: sanitizeResponseText(validated.whyTheseActionsMatter),
-    estimatedImpact: sanitizeResponseText(validated.estimatedImpact),
-    importantPrecautions: sanitizeResponseText(validated.importantPrecautions),
-  };
+  return parseProviderJsonResponse(text, `Google Gemini (${model})`, input.context);
 }
 
 export async function generateAssistantGuidance(

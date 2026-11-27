@@ -8,7 +8,7 @@ const SAMPLE_INPUT = {
   context: {
     location: "Kolkata",
     aqi: 241,
-    aqiCategory: "Poor",
+    aqiCategory: "Poor" as const,
     pm25: 102,
     pm10: 190,
     dataMode: "live" as const,

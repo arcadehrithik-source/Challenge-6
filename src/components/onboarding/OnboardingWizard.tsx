@@ -59,7 +59,7 @@ export function OnboardingWizard() {
     }
   }, [isHydrated, profile, form]);
 
-  const watchedValues = useWatch({ control: form.control }) as OnboardingFormValues;
+  const watchedValues = useWatch({ control: form.control }) as Partial<OnboardingFormValues>;
   const currentStep = STEPS[stepIdx]!;
   const progressValue = ((stepIdx + 1) / STEPS.length) * 100;
 

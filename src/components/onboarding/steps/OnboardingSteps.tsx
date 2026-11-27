@@ -12,8 +12,93 @@ export type OnboardingFormValues = z.input<typeof userProfileSchema>;
 
 interface StepProps {
   form: UseFormReturn<OnboardingFormValues>;
-  watchedValues: OnboardingFormValues;
+  watchedValues: Partial<OnboardingFormValues>;
 }
+
+interface CardOption<T extends string> {
+  value: T;
+  label: string;
+  desc: string;
+}
+
+function OptionCardGrid<T extends string>({
+  options,
+  selectedValue,
+  onSelect,
+}: {
+  options: ReadonlyArray<CardOption<T>>;
+  selectedValue: T | undefined;
+  onSelect: (value: T) => void;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {options.map((opt) => {
+        const active = selectedValue === opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onSelect(opt.value)}
+            className={`flex flex-col rounded-xl border p-4 text-left transition-colors cursor-pointer ${
+              active
+                ? "border-[#0d3b2e] bg-emerald-50/70"
+                : "border-[#dce5df] bg-white hover:bg-[#f7faf8]"
+            }`}
+          >
+            <span className="font-semibold text-[#10201a]">{opt.label}</span>
+            <span className="mt-1 text-xs text-[#4b5e56]">{opt.desc}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const HOUSEHOLD_OPTIONS: ReadonlyArray<CardOption<UserProfile["household"]>> = [
+  { value: "individual", label: "Individual", desc: "Solo daily planning" },
+  { value: "couple", label: "Couple", desc: "Two-adult household" },
+  { value: "family", label: "Family", desc: "Multi-member home" },
+  {
+    value: "family_with_children",
+    label: "Family with children",
+    desc: "Prioritizes school transit & play windows",
+  },
+  {
+    value: "household_with_seniors",
+    label: "Household with senior citizens",
+    desc: "Prioritizes indoor stability & walk timing",
+  },
+];
+
+const LIFESTYLE_OPTIONS: ReadonlyArray<CardOption<UserProfile["lifestyle"]>> = [
+  {
+    value: "office_commuter",
+    label: "Office Commuter",
+    desc: "Peak-hour travel & indoor office",
+  },
+  { value: "student", label: "Student", desc: "School/college transit & campus time" },
+  {
+    value: "remote_worker",
+    label: "Remote Worker",
+    desc: "High focus on indoor air & ventilation",
+  },
+  { value: "outdoor_worker", label: "Outdoor Worker", desc: "Extended outdoor shift protection" },
+  {
+    value: "fitness_enthusiast",
+    label: "Fitness Enthusiast",
+    desc: "High-ventilation exercise timing",
+  },
+];
+
+const COMMUTE_MODES: ReadonlyArray<{ value: UserProfile["commute"]; label: string }> = [
+  { value: "walking", label: "Walking" },
+  { value: "bicycle", label: "Bicycle" },
+  { value: "public_transport", label: "Public Transport" },
+  { value: "two_wheeler", label: "Two-Wheeler" },
+  { value: "car", label: "Car" },
+  { value: "work_from_home", label: "Work from Home" },
+];
 
 export function StepLocation({ form, watchedValues }: StepProps) {
   const cityError = form.formState.errors.city?.message;
@@ -95,22 +180,6 @@ export function StepLocation({ form, watchedValues }: StepProps) {
 }
 
 export function StepHousehold({ form, watchedValues }: StepProps) {
-  const options = [
-    { value: "individual", label: "Individual", desc: "Solo daily planning" },
-    { value: "couple", label: "Couple", desc: "Two-adult household" },
-    { value: "family", label: "Family", desc: "Multi-member home" },
-    {
-      value: "family_with_children",
-      label: "Family with children",
-      desc: "Prioritizes school transit & play windows",
-    },
-    {
-      value: "household_with_seniors",
-      label: "Household with senior citizens",
-      desc: "Prioritizes indoor stability & walk timing",
-    },
-  ] as const;
-
   return (
     <div className="space-y-4">
       <div>
@@ -119,52 +188,16 @@ export function StepHousehold({ form, watchedValues }: StepProps) {
           Children and senior citizens have distinct respiratory sensitivity and timing needs.
         </p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {options.map((opt) => {
-          const active = watchedValues.household === opt.value;
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              aria-pressed={active}
-              onClick={() => form.setValue("household", opt.value as UserProfile["household"])}
-              className={`flex flex-col rounded-xl border p-4 text-left transition-colors cursor-pointer ${
-                active
-                  ? "border-[#0d3b2e] bg-emerald-50/70"
-                  : "border-[#dce5df] bg-white hover:bg-[#f7faf8]"
-              }`}
-            >
-              <span className="font-semibold text-[#10201a]">{opt.label}</span>
-              <span className="mt-1 text-xs text-[#4b5e56]">{opt.desc}</span>
-            </button>
-          );
-        })}
-      </div>
+      <OptionCardGrid
+        options={HOUSEHOLD_OPTIONS}
+        selectedValue={watchedValues.household}
+        onSelect={(val) => form.setValue("household", val)}
+      />
     </div>
   );
 }
 
 export function StepLifestyle({ form, watchedValues }: StepProps) {
-  const options = [
-    {
-      value: "office_commuter",
-      label: "Office Commuter",
-      desc: "Peak-hour travel & indoor office",
-    },
-    { value: "student", label: "Student", desc: "School/college transit & campus time" },
-    {
-      value: "remote_worker",
-      label: "Remote Worker",
-      desc: "High focus on indoor air & ventilation",
-    },
-    { value: "outdoor_worker", label: "Outdoor Worker", desc: "Extended outdoor shift protection" },
-    {
-      value: "fitness_enthusiast",
-      label: "Fitness Enthusiast",
-      desc: "High-ventilation exercise timing",
-    },
-  ] as const;
-
   return (
     <div className="space-y-4">
       <div>
@@ -175,41 +208,17 @@ export function StepLifestyle({ form, watchedValues }: StepProps) {
           Your breathing rate and hours spent outdoors shape our priority guidance.
         </p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {options.map((opt) => {
-          const active = watchedValues.lifestyle === opt.value;
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              aria-pressed={active}
-              onClick={() => form.setValue("lifestyle", opt.value as UserProfile["lifestyle"])}
-              className={`flex flex-col rounded-xl border p-4 text-left transition-colors cursor-pointer ${
-                active
-                  ? "border-[#0d3b2e] bg-emerald-50/70"
-                  : "border-[#dce5df] bg-white hover:bg-[#f7faf8]"
-              }`}
-            >
-              <span className="font-semibold text-[#10201a]">{opt.label}</span>
-              <span className="mt-1 text-xs text-[#4b5e56]">{opt.desc}</span>
-            </button>
-          );
-        })}
-      </div>
+      <OptionCardGrid
+        options={LIFESTYLE_OPTIONS}
+        selectedValue={watchedValues.lifestyle}
+        onSelect={(val) => form.setValue("lifestyle", val)}
+      />
     </div>
   );
 }
 
 export function StepCommute({ form, watchedValues }: StepProps) {
   const distError = form.formState.errors.commuteDistanceKm?.message;
-  const modes = [
-    { value: "walking", label: "Walking" },
-    { value: "bicycle", label: "Bicycle" },
-    { value: "public_transport", label: "Public Transport" },
-    { value: "two_wheeler", label: "Two-Wheeler" },
-    { value: "car", label: "Car" },
-    { value: "work_from_home", label: "Work from Home" },
-  ] as const;
 
   return (
     <div className="space-y-5">
@@ -220,14 +229,14 @@ export function StepCommute({ form, watchedValues }: StepProps) {
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
-        {modes.map((opt) => {
+        {COMMUTE_MODES.map((opt) => {
           const active = watchedValues.commute === opt.value;
           return (
             <button
               key={opt.value}
               type="button"
               aria-pressed={active}
-              onClick={() => form.setValue("commute", opt.value as UserProfile["commute"])}
+              onClick={() => form.setValue("commute", opt.value)}
               className={`rounded-xl border px-4 py-3 text-sm font-semibold transition-colors cursor-pointer ${
                 active
                   ? "border-[#0d3b2e] bg-[#0d3b2e] text-white"

@@ -1,23 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAirQualitySnapshot } from "@/lib/air-quality-service";
 import { airQualityQuerySchema } from "@/lib/schemas";
+import {
+  jsonErrorResponse,
+  rateLimitExceededResponse,
+  rateLimitHeaders,
+} from "@/lib/security/http";
 import { checkRateLimit, getClientIdentifier } from "@/lib/security/rate-limit";
-import { safeErrorMessage } from "@/lib/security/sanitize";
+
+const AIR_QUALITY_RATE_LIMIT = 45;
 
 export async function GET(request: NextRequest) {
   try {
     const clientId = `aq:${getClientIdentifier(request.headers)}`;
-    const rate = await checkRateLimit(clientId, { limit: 45, windowMs: 60_000 });
+    const rate = await checkRateLimit(clientId, {
+      limit: AIR_QUALITY_RATE_LIMIT,
+      windowMs: 60_000,
+    });
     if (!rate.allowed) {
-      return NextResponse.json(
-        { error: "Rate limit exceeded. Please retry shortly." },
-        {
-          status: 429,
-          headers: {
-            "X-RateLimit-Remaining": "0",
-            "Retry-After": "60",
-          },
-        }
+      return rateLimitExceededResponse(
+        rate,
+        AIR_QUALITY_RATE_LIMIT,
+        "Rate limit exceeded. Please retry shortly."
       );
     }
 
@@ -54,10 +58,10 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-        "X-RateLimit-Remaining": String(rate.remaining),
+        ...rateLimitHeaders(rate, AIR_QUALITY_RATE_LIMIT),
       },
     });
   } catch (error) {
-    return NextResponse.json({ error: safeErrorMessage(error) }, { status: 500 });
+    return jsonErrorResponse(error, 500);
   }
 }

@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+export const aqiCategorySchema = z.enum([
+  "Good",
+  "Satisfactory",
+  "Moderate",
+  "Poor",
+  "Very Poor",
+  "Severe",
+]);
+
 export const householdTypeSchema = z.enum([
   "individual",
   "couple",
@@ -44,6 +53,24 @@ export const sustainabilityPrioritySchema = z.enum([
 
 export const demoScenarioSchema = z.enum(["auto", "good", "moderate", "poor", "severe"]);
 
+export const indoorEnvironmentSchema = z.object({
+  hasAirPurifier: z.boolean(),
+  hasIndoorPlants: z.boolean(),
+  windowsFrequentlyOpen: z.boolean(),
+  cookingFuel: cookingFuelSchema,
+  ventilation: ventilationLevelSchema,
+});
+
+export const userPreferencesSchema = z.object({
+  dailyNotifications: z.boolean(),
+  notificationTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, "Use HH:MM format")
+    .default("07:30"),
+  sustainabilityPriority: sustainabilityPrioritySchema,
+  budget: budgetPreferenceSchema,
+});
+
 export const userProfileSchema = z.object({
   city: z
     .string()
@@ -63,22 +90,8 @@ export const userProfileSchema = z.object({
   lifestyle: lifestyleTypeSchema,
   commute: commuteModeSchema,
   commuteDistanceKm: z.number().min(0).max(120).default(8),
-  indoorEnvironment: z.object({
-    hasAirPurifier: z.boolean(),
-    hasIndoorPlants: z.boolean(),
-    windowsFrequentlyOpen: z.boolean(),
-    cookingFuel: cookingFuelSchema,
-    ventilation: ventilationLevelSchema,
-  }),
-  preferences: z.object({
-    dailyNotifications: z.boolean(),
-    notificationTime: z
-      .string()
-      .regex(/^\d{2}:\d{2}$/, "Use HH:MM format")
-      .default("07:30"),
-    sustainabilityPriority: sustainabilityPrioritySchema,
-    budget: budgetPreferenceSchema,
-  }),
+  indoorEnvironment: indoorEnvironmentSchema,
+  preferences: userPreferencesSchema,
   demoScenario: demoScenarioSchema.optional().default("auto"),
   updatedAt: z.string().datetime().optional(),
 });
@@ -106,7 +119,7 @@ export const assistantRequestSchema = z.object({
   context: z.object({
     location: z.string().trim().min(2).max(120),
     aqi: z.number().min(0).max(500),
-    aqiCategory: z.string().trim().min(2).max(30),
+    aqiCategory: aqiCategorySchema,
     pm25: z.number().min(0).max(2000).nullable(),
     pm10: z.number().min(0).max(2000).nullable(),
     dataMode: z.enum(["live", "demo"]),
@@ -115,18 +128,8 @@ export const assistantRequestSchema = z.object({
     lifestyle: lifestyleTypeSchema,
     commute: commuteModeSchema,
     commuteDistanceKm: z.number().min(0).max(120).optional().default(8),
-    indoorEnvironment: z.object({
-      hasAirPurifier: z.boolean(),
-      hasIndoorPlants: z.boolean(),
-      windowsFrequentlyOpen: z.boolean(),
-      cookingFuel: cookingFuelSchema,
-      ventilation: ventilationLevelSchema,
-    }),
-    preferences: z.object({
-      dailyNotifications: z.boolean(),
-      sustainabilityPriority: sustainabilityPrioritySchema,
-      budget: budgetPreferenceSchema,
-    }),
+    indoorEnvironment: indoorEnvironmentSchema,
+    preferences: userPreferencesSchema.omit({ notificationTime: true }),
   }),
 });
 

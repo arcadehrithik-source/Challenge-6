@@ -107,87 +107,73 @@ export function getAqiCategory(aqi: number): AqiCategory {
 export interface AqiCategoryMeta {
   category: AqiCategory;
   range: string;
-  badgeText: string;
   shortAction: string;
   healthAdvisory: string;
   colorClass: string;
   surfaceClass: string;
   borderClass: string;
-  hex: string;
 }
 
 export const AQI_CATEGORY_META: Record<AqiCategory, AqiCategoryMeta> = {
   Good: {
     category: "Good",
     range: "0 – 50",
-    badgeText: "Low Risk",
     shortAction: "Ideal for outdoor movement & ventilation",
     healthAdvisory:
       "Minimal impact. Air quality is suitable for outdoor routines, school play, and natural cross-ventilation.",
-    colorClass: "text-emerald-800 dark:text-emerald-200",
-    surfaceClass: "bg-emerald-50 dark:bg-emerald-950/40",
-    borderClass: "border-emerald-300 dark:border-emerald-800",
-    hex: "#0f766e",
+    colorClass: "text-emerald-800",
+    surfaceClass: "bg-emerald-50",
+    borderClass: "border-emerald-300",
   },
   Satisfactory: {
     category: "Satisfactory",
     range: "51 – 100",
-    badgeText: "Minor Sensitivity",
     shortAction: "Normal routines with light watch for sensitive groups",
     healthAdvisory:
       "Acceptable air quality; unusually sensitive individuals may experience minor breathing discomfort during prolonged exertion.",
-    colorClass: "text-teal-800 dark:text-teal-200",
-    surfaceClass: "bg-teal-50 dark:bg-teal-950/40",
-    borderClass: "border-teal-300 dark:border-teal-800",
-    hex: "#0d9488",
+    colorClass: "text-teal-800",
+    surfaceClass: "bg-teal-50",
+    borderClass: "border-teal-300",
   },
   Moderate: {
     category: "Moderate",
     range: "101 – 200",
-    badgeText: "Moderate Risk",
     shortAction: "Time outdoor workouts carefully; ventilate midday",
     healthAdvisory:
       "May cause breathing discomfort to people with lung/heart sensitivities, children, and older adults during sustained outdoor exertion.",
-    colorClass: "text-amber-900 dark:text-amber-200",
-    surfaceClass: "bg-amber-50 dark:bg-amber-950/40",
-    borderClass: "border-amber-300 dark:border-amber-800",
-    hex: "#d97706",
+    colorClass: "text-amber-900",
+    surfaceClass: "bg-amber-50",
+    borderClass: "border-amber-300",
   },
   Poor: {
     category: "Poor",
     range: "201 – 300",
-    badgeText: "Elevated Risk",
     shortAction: "Shift workouts indoors; reduce traffic-corridor exposure",
     healthAdvisory:
       "May cause breathing discomfort on prolonged exposure and affect sensitive groups more quickly. Prefer indoor activities and filtered air.",
-    colorClass: "text-orange-900 dark:text-orange-200",
-    surfaceClass: "bg-orange-50 dark:bg-orange-950/40",
-    borderClass: "border-orange-300 dark:border-orange-800",
-    hex: "#ea580c",
+    colorClass: "text-orange-900",
+    surfaceClass: "bg-orange-50",
+    borderClass: "border-orange-300",
   },
   "Very Poor": {
     category: "Very Poor",
     range: "301 – 400",
-    badgeText: "High Risk",
     shortAction: "Avoid outdoor exertion; seal leaks & run filtration",
     healthAdvisory:
       "Prolonged exposure increases respiratory irritation risk for everyone. Minimize outdoor time, avoid busy roads, and manage indoor pollution sources.",
-    colorClass: "text-red-900 dark:text-red-200",
-    surfaceClass: "bg-red-50 dark:bg-red-950/40",
-    borderClass: "border-red-300 dark:border-red-800",
-    hex: "#dc2626",
+    colorClass: "text-red-900",
+    surfaceClass: "bg-red-50",
+    borderClass: "border-red-300",
   },
   Severe: {
     category: "Severe",
     range: "401 – 500",
-    badgeText: "Critical Alert",
     shortAction: "Stay indoors where possible; use N95/FFP2 outdoors",
     healthAdvisory:
       "Severe air quality affects healthy individuals and poses heightened concern for children, seniors, and outdoor workers. Avoid strenuous outdoor activity.",
-    colorClass: "text-rose-950 dark:text-rose-100",
-    surfaceClass: "bg-rose-100 dark:bg-rose-950/60",
-    borderClass: "border-rose-400 dark:border-rose-800",
-    hex: "#9f1239",
+    colorClass: "text-rose-950",
+    surfaceClass: "bg-rose-100",
+    borderClass: "border-rose-400",
   },
 };
 

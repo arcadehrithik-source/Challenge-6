@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Bike, Bus, Car, Footprints, Info } from "lucide-react";
+import { AlertTriangle, Bike, Bus, Car, Footprints, Home, Info } from "lucide-react";
 import { useBreatheWise } from "@/components/providers/BreatheWiseProvider";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,12 +16,13 @@ const MODE_ICON: Record<CommuteMode, React.ComponentType<{ className?: string }>
   public_transport: Bus,
   two_wheeler: Bike,
   car: Car,
-  work_from_home: Bus,
+  work_from_home: Home,
 };
 
 export function SmartCommuteModule() {
   const { airQuality, profile } = useBreatheWise();
-  const [distanceKm, setDistanceKm] = useState(profile.commuteDistanceKm || 8);
+  const [overrideDistanceKm, setOverrideDistanceKm] = useState<number | null>(null);
+  const distanceKm = overrideDistanceKm ?? (profile.commuteDistanceKm || 8);
 
   const comparisons = compareCommuteOptions(airQuality.aqi, distanceKm, profile.commute);
 
@@ -53,7 +54,7 @@ export function SmartCommuteModule() {
               max={80}
               value={distanceKm}
               onChange={(e) =>
-                setDistanceKm(Math.max(1, Math.min(80, Number(e.target.value) || 1)))
+                setOverrideDistanceKm(Math.max(1, Math.min(80, Number(e.target.value) || 1)))
               }
             />
             <p className="text-xs text-[#4b5e56]">

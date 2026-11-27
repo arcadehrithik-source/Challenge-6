@@ -1,6 +1,14 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { MotionConfig } from "framer-motion";
 import {
   buildDefaultChecklist,
@@ -78,13 +86,26 @@ export function BreatheWiseProvider({ children }: { children: React.ReactNode })
   const [streakDays, setStreakDays] = useState(0);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const toastTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  useEffect(() => {
+    const timers = toastTimersRef.current;
+    return () => {
+      for (const timer of timers) {
+        clearTimeout(timer);
+      }
+      timers.clear();
+    };
+  }, []);
 
   const notify = useCallback((title: string, description?: string) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     setToasts((prev) => [...prev, { id, title, description }]);
-    setTimeout(() => {
+    const timer = setTimeout(() => {
+      toastTimersRef.current.delete(timer);
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 4000);
+    toastTimersRef.current.add(timer);
   }, []);
 
   const fetchSnapshot = useCallback(
@@ -207,18 +228,16 @@ export function BreatheWiseProvider({ children }: { children: React.ReactNode })
 
   const toggleChecklistItem = useCallback(
     (id: string) => {
-      setChecklistMap((prev) => {
-        const nextMap = { ...prev, [id]: !prev[id] };
-        const updatedList = checklist.map((item) => ({
-          ...item,
-          completed: Boolean(nextMap[item.id]),
-        }));
-        saveChecklistState(updatedList);
-        setStreakDays(loadStreakDays());
-        return nextMap;
-      });
+      const nextMap = { ...checklistMap, [id]: !checklistMap[id] };
+      const updatedList = checklist.map((item) => ({
+        ...item,
+        completed: Boolean(nextMap[item.id]),
+      }));
+      setChecklistMap(nextMap);
+      saveChecklistState(updatedList);
+      setStreakDays(loadStreakDays());
     },
-    [checklist]
+    [checklist, checklistMap]
   );
 
   const resetLocalSession = useCallback(() => {
@@ -231,27 +250,49 @@ export function BreatheWiseProvider({ children }: { children: React.ReactNode })
     notify("Preferences reset", "Local profile and checklist data cleared.");
   }, [fetchSnapshot, notify]);
 
-  const value: BreatheWiseContextValue = {
-    profile,
-    isHydrated,
-    airQuality,
-    isLoadingAirQuality,
-    airQualityError,
-    dataMode,
-    recommendations,
-    exposure,
-    dailyPlan,
-    checklist,
-    streakDays,
-    assistantOpen,
-    setAssistantOpen,
-    updateProfile,
-    switchDataMode,
-    refreshAirQuality,
-    toggleChecklistItem,
-    resetLocalSession,
-    notify,
-  };
+  const value = useMemo<BreatheWiseContextValue>(
+    () => ({
+      profile,
+      isHydrated,
+      airQuality,
+      isLoadingAirQuality,
+      airQualityError,
+      dataMode,
+      recommendations,
+      exposure,
+      dailyPlan,
+      checklist,
+      streakDays,
+      assistantOpen,
+      setAssistantOpen,
+      updateProfile,
+      switchDataMode,
+      refreshAirQuality,
+      toggleChecklistItem,
+      resetLocalSession,
+      notify,
+    }),
+    [
+      profile,
+      isHydrated,
+      airQuality,
+      isLoadingAirQuality,
+      airQualityError,
+      dataMode,
+      recommendations,
+      exposure,
+      dailyPlan,
+      checklist,
+      streakDays,
+      assistantOpen,
+      updateProfile,
+      switchDataMode,
+      refreshAirQuality,
+      toggleChecklistItem,
+      resetLocalSession,
+      notify,
+    ]
+  );
 
   return (
     <MotionConfig reducedMotion="user">

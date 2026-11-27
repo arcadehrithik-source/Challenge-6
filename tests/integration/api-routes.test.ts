@@ -70,6 +70,7 @@ describe("API Route validation, fallback, and rate limiting", () => {
     });
     const res = await postAssistant(req);
     expect(res.status).toBe(200);
+    expect(res.headers.get("X-RateLimit-Limit")).toBe("12");
     const data = await res.json();
     expect(data.isFallback).toBe(true);
     expect(data.recommendedActions.length).toBeGreaterThan(0);

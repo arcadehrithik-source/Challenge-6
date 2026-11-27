@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Award, CheckSquare, Flame, Leaf, Square } from "lucide-react";
+import { Award, Flame, Leaf } from "lucide-react";
 import { useBreatheWise } from "@/components/providers/BreatheWiseProvider";
+import { SafetyChecklistCard } from "@/components/recommendations/SafetyChecklistCard";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { calculateImpactMetrics } from "@/lib/commute-impact";
@@ -135,38 +136,15 @@ export function ImpactTrackerModule() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-5">
-          <CardHeader>
-            <CardTitle>Log Today&apos;s Actions</CardTitle>
-            <CardDescription>Check items off to update your impact numbers live.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2.5">
-            {checklist.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                role="checkbox"
-                aria-checked={item.completed}
-                onClick={() => toggleChecklistItem(item.id)}
-                className={`flex w-full items-start gap-2.5 rounded-xl border p-3 text-left text-xs transition-colors cursor-pointer ${
-                  item.completed
-                    ? "border-emerald-300 bg-emerald-50"
-                    : "border-[#dce5df] bg-white hover:bg-[#f7faf8]"
-                }`}
-              >
-                {item.completed ? (
-                  <CheckSquare
-                    className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <Square className="mt-0.5 h-4 w-4 shrink-0 text-[#4b5e56]" aria-hidden="true" />
-                )}
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </CardContent>
-        </Card>
+        <div className="lg:col-span-5">
+          <SafetyChecklistCard
+            title="Log Today's Actions"
+            description="Check items off to update your impact numbers live."
+            checklist={checklist}
+            onToggle={toggleChecklistItem}
+            showDetails={false}
+          />
+        </div>
       </div>
 
       {/* Transparent Methodology */}

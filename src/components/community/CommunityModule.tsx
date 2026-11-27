@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Copy, Share2, Trophy, Users } from "lucide-react";
 import { AqiBadge } from "@/components/air-quality/AqiBadge";
 import { useBreatheWise } from "@/components/providers/BreatheWiseProvider";
@@ -33,6 +33,13 @@ const COMMUNITY_CHALLENGES = [
 export function CommunityModule() {
   const { airQuality, recommendations, notify } = useBreatheWise();
   const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
 
   const shareText = `BreatheWise Daily Advisory for ${airQuality.city}: AQI ${airQuality.aqi} (${airQuality.category}), Main Pollutant ${airQuality.mainPollutant}. Top action today: ${recommendations[0]?.title ?? "Protect sensitive groups and reduce unnecessary idling."}`;
 
@@ -41,7 +48,8 @@ export function CommunityModule() {
       await navigator.clipboard.writeText(shareText);
       setCopied(true);
       notify("Advisory copied", "Shareable city air-quality summary copied to clipboard.");
-      setTimeout(() => setCopied(false), 2500);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopied(false), 2500);
     } catch {
       notify("Copy unavailable", "Select and copy the summary text manually.");
     }

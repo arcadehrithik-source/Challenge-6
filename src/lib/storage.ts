@@ -66,6 +66,21 @@ export function loadChecklistState(): Record<string, boolean> {
   }
 }
 
+function parseStreakRecord(raw: string | null): { lastDate?: string; days: number } {
+  if (!raw) return { days: 0 };
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return { days: 0 };
+    const record = parsed as Record<string, unknown>;
+    return {
+      lastDate: typeof record.lastDate === "string" ? record.lastDate : undefined,
+      days: typeof record.days === "number" && record.days >= 0 ? record.days : 0,
+    };
+  } catch {
+    return { days: 0 };
+  }
+}
+
 export function saveChecklistState(items: ChecklistItem[]): void {
   if (typeof window === "undefined") return;
   try {
@@ -78,15 +93,11 @@ export function saveChecklistState(items: ChecklistItem[]): void {
     const anyDone = items.some((i) => i.completed);
     if (anyDone) {
       const today = new Date().toISOString().slice(0, 10);
-      const rawStreak = window.localStorage.getItem(STREAK_STORAGE_KEY);
-      const current = rawStreak
-        ? (JSON.parse(rawStreak) as { lastDate?: string; days?: number })
-        : {};
+      const current = parseStreakRecord(window.localStorage.getItem(STREAK_STORAGE_KEY));
       if (current.lastDate !== today) {
-        const nextDays = (current.days ?? 0) + 1;
         window.localStorage.setItem(
           STREAK_STORAGE_KEY,
-          JSON.stringify({ lastDate: today, days: nextDays })
+          JSON.stringify({ lastDate: today, days: current.days + 1 })
         );
       }
     }
@@ -97,14 +108,7 @@ export function saveChecklistState(items: ChecklistItem[]): void {
 
 export function loadStreakDays(): number {
   if (typeof window === "undefined") return 0;
-  try {
-    const raw = window.localStorage.getItem(STREAK_STORAGE_KEY);
-    if (!raw) return 0;
-    const parsed = JSON.parse(raw) as { days?: number };
-    return typeof parsed.days === "number" ? parsed.days : 0;
-  } catch {
-    return 0;
-  }
+  return parseStreakRecord(window.localStorage.getItem(STREAK_STORAGE_KEY)).days;
 }
 
 export function loadDataMode(): "live" | "demo" {

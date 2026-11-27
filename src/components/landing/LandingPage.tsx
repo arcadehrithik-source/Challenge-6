@@ -2,121 +2,13 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import {
-  Activity,
-  ArrowRight,
-  BarChart3,
-  Bike,
-  CheckCircle2,
-  CloudFog,
-  Compass,
-  Home,
-  Leaf,
-  Menu,
-  ShieldCheck,
-  Sparkles,
-  Users,
-  Wind,
-  X,
-} from "lucide-react";
+import { ArrowRight, CheckCircle2, Menu, ShieldCheck, Sparkles, Wind, X } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { HeroVisual } from "./HeroVisual";
-
-const PROBLEM_CARDS = [
-  {
-    icon: CloudFog,
-    title: "Winter Smog Traps",
-    description:
-      "Temperature inversions pin morning and evening traffic and biomass smoke near street level, making dawn walks and school runs peak exposure hours.",
-  },
-  {
-    icon: Home,
-    title: "Hidden Indoor Spikes",
-    description:
-      "Cooking fumes, dry sweeping, incense, and poorly timed window opening can push indoor PM2.5 higher than outdoor street air.",
-  },
-  {
-    icon: Bike,
-    title: "Commute Inhalation",
-    description:
-      "Cyclists, walkers, and two-wheeler riders inhale 2–5x more particulates along congested corridors than inside sheltered transit.",
-  },
-  {
-    icon: Users,
-    title: "Household Vulnerability",
-    description:
-      "Children, senior citizens, students, and outdoor workers need tailored routines—not a single generic city AQI number.",
-  },
-];
-
-const FEATURE_CARDS = [
-  {
-    icon: Activity,
-    title: "Real-Time AQI Intelligence",
-    description:
-      "Live Open-Meteo pollutant feeds converted into transparent Indian NAQI (CPCB) categories with clear observed vs forecast vs demo labels.",
-  },
-  {
-    icon: Compass,
-    title: "Personalized Daily Routines",
-    description:
-      "Time-of-day plans tailored to your household, commute, cooking fuel, and budget—with clear reasoning behind every step.",
-  },
-  {
-    icon: Home,
-    title: "Indoor Air Guidance",
-    description:
-      "Practical ventilation windows, cooking exhaust habits, HEPA setup tips, and honest zero-cost actions when no purifier is available.",
-  },
-  {
-    icon: Bike,
-    title: "Smart Commute Assistant",
-    description:
-      "Compare walking, cycling, public transit, two-wheeler, and car across travel time, CO2 emissions, and modeled exposure.",
-  },
-  {
-    icon: Leaf,
-    title: "Sustainable Alternatives",
-    description:
-      "Connect healthier daily choices to lower neighborhood emissions through carpooling, transit shifts, and zero-idling habits.",
-  },
-  {
-    icon: BarChart3,
-    title: "Transparent Impact Tracker",
-    description:
-      "Track completed household actions, streaks, and estimated CO2 avoided with every baseline assumption openly explained.",
-  },
-];
-
-const STEPS = [
-  {
-    step: "01",
-    title: "Understand your environment",
-    description:
-      "Fetch live city pollutant levels (PM2.5, PM10, NO2, O3) or explore clearly labeled winter smog simulation scenarios.",
-  },
-  {
-    step: "02",
-    title: "Understand your lifestyle",
-    description:
-      "Share your household composition, commute mode, indoor ventilation, cooking fuel, and budget in a 60-second setup.",
-  },
-  {
-    step: "03",
-    title: "Generate personalized actions",
-    description:
-      "Receive prioritized recommendations explaining what to do, why it matters, when to act, and ask BreatheWise Intelligence anything.",
-  },
-  {
-    step: "04",
-    title: "Track your impact",
-    description:
-      "Check off daily clean-air and low-emission habits to see exposure-reduction wins and estimated CO2 avoided.",
-  },
-];
+import { FEATURE_CARDS, LANDING_NAV_LINKS, PROBLEM_CARDS, WORKFLOW_STEPS } from "./landing-content";
 
 export function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -129,21 +21,15 @@ export function LandingPage() {
           <Logo />
 
           <nav aria-label="Primary navigation" className="hidden items-center gap-7 md:flex">
-            <a href="#top" className="text-sm font-medium text-[#30443c] hover:text-[#0d3b2e]">
-              Home
-            </a>
-            <a href="#features" className="text-sm font-medium text-[#30443c] hover:text-[#0d3b2e]">
-              Features
-            </a>
-            <a
-              href="#how-it-works"
-              className="text-sm font-medium text-[#30443c] hover:text-[#0d3b2e]"
-            >
-              How It Works
-            </a>
-            <a href="#impact" className="text-sm font-medium text-[#30443c] hover:text-[#0d3b2e]">
-              Impact
-            </a>
+            {LANDING_NAV_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-sm font-medium text-[#30443c] hover:text-[#0d3b2e]"
+              >
+                {link.label}
+              </a>
+            ))}
           </nav>
 
           <div className="hidden items-center gap-3 md:flex">
@@ -172,34 +58,16 @@ export function LandingPage() {
         {mobileMenuOpen && (
           <div className="border-t border-[#dce5df] bg-white px-4 py-4 md:hidden">
             <nav className="flex flex-col gap-3" aria-label="Mobile navigation">
-              <a
-                href="#top"
-                onClick={() => setMobileMenuOpen(false)}
-                className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-[#edf3ef]"
-              >
-                Home
-              </a>
-              <a
-                href="#features"
-                onClick={() => setMobileMenuOpen(false)}
-                className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-[#edf3ef]"
-              >
-                Features
-              </a>
-              <a
-                href="#how-it-works"
-                onClick={() => setMobileMenuOpen(false)}
-                className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-[#edf3ef]"
-              >
-                How It Works
-              </a>
-              <a
-                href="#impact"
-                onClick={() => setMobileMenuOpen(false)}
-                className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-[#edf3ef]"
-              >
-                Impact
-              </a>
+              {LANDING_NAV_LINKS.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-[#edf3ef]"
+                >
+                  {link.label}
+                </a>
+              ))}
               <div className="mt-2 flex flex-col gap-2 border-t border-[#e5ede8] pt-3">
                 <Button variant="outline" asChild className="w-full">
                   <Link href="/dashboard">Open Dashboard</Link>
@@ -360,7 +228,7 @@ export function LandingPage() {
             </div>
 
             <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {STEPS.map((item) => (
+              {WORKFLOW_STEPS.map((item) => (
                 <div
                   key={item.step}
                   className="rounded-2xl border border-[#dce5df] bg-[#f7faf8] p-6"

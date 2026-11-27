@@ -39,6 +39,34 @@ const NAV_ITEMS = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
+function SidebarNavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  return (
+    <nav className="space-y-1">
+      {NAV_ITEMS.map((item) => {
+        const Icon = item.icon;
+        const active = pathname === item.href;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors",
+              active
+                ? "bg-[#0d3b2e] text-white"
+                : "text-[#30443c] hover:bg-[#edf3ef] hover:text-[#10201a]"
+            )}
+          >
+            <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const {
@@ -177,28 +205,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           aria-label="Dashboard navigation"
           className="hidden w-64 shrink-0 border-r border-[#dce5df] bg-white p-4 lg:block"
         >
-          <nav className="space-y-1">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-[#0d3b2e] text-white"
-                      : "text-[#30443c] hover:bg-[#edf3ef] hover:text-[#10201a]"
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+          <SidebarNavLinks pathname={pathname} />
 
           <div className="mt-6 rounded-2xl border border-[#dce5df] bg-[#f7faf8] p-4">
             <p className="text-xs font-semibold text-[#10201a]">Active Persona</p>
@@ -237,26 +244,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <nav className="space-y-1">
-                {NAV_ITEMS.map((item) => {
-                  const Icon = item.icon;
-                  const active = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setSidebarOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium",
-                        active ? "bg-[#0d3b2e] text-white" : "text-[#30443c] hover:bg-[#edf3ef]"
-                      )}
-                    >
-                      <Icon className="h-4 w-4" aria-hidden="true" />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
+              <SidebarNavLinks pathname={pathname} onNavigate={() => setSidebarOpen(false)} />
             </aside>
           </div>
         )}

@@ -1,24 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateAssistantGuidance } from "@/lib/ai-assistant";
 import { assistantRequestSchema } from "@/lib/schemas";
+import {
+  jsonErrorResponse,
+  rateLimitExceededResponse,
+  rateLimitHeaders,
+} from "@/lib/security/http";
 import { checkRateLimit, getClientIdentifier } from "@/lib/security/rate-limit";
-import { enforcePayloadSize, safeErrorMessage } from "@/lib/security/sanitize";
+import { enforcePayloadSize } from "@/lib/security/sanitize";
+
+const ASSISTANT_RATE_LIMIT = 12;
 
 export async function POST(request: NextRequest) {
   try {
     const clientId = `ai:${getClientIdentifier(request.headers)}`;
-    const rate = await checkRateLimit(clientId, { limit: 12, windowMs: 60_000 });
+    const rate = await checkRateLimit(clientId, {
+      limit: ASSISTANT_RATE_LIMIT,
+      windowMs: 60_000,
+    });
     if (!rate.allowed) {
-      return NextResponse.json(
-        { error: "Too many AI assistant requests. Please wait a minute and try again." },
-        {
-          status: 429,
-          headers: {
-            "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Backend": rate.backend,
-            "Retry-After": "60",
-          },
-        }
+      return rateLimitExceededResponse(
+        rate,
+        ASSISTANT_RATE_LIMIT,
+        "Too many AI assistant requests. Please wait a minute and try again."
       );
     }
 
@@ -52,12 +56,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result, {
       status: 200,
-      headers: {
-        "X-RateLimit-Remaining": String(rate.remaining),
-        "X-RateLimit-Backend": rate.backend,
-      },
+      headers: rateLimitHeaders(rate, ASSISTANT_RATE_LIMIT),
     });
   } catch (error) {
-    return NextResponse.json({ error: safeErrorMessage(error) }, { status: 500 });
+    return jsonErrorResponse(error, 500);
   }
 }
