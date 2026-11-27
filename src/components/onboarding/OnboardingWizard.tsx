@@ -5,17 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Home,
-  Leaf,
-  MapPin,
-  Route,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { useBreatheWise } from "@/components/providers/BreatheWiseProvider";
 import { Button } from "@/components/ui/button";
@@ -23,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { userProfileSchema } from "@/lib/schemas";
 import type { UserProfile } from "@/lib/types";
+import { ONBOARDING_STEPS } from "./onboarding-config";
 import {
   type OnboardingFormValues,
   StepCommute,
@@ -33,15 +24,30 @@ import {
   StepPreferences,
 } from "./steps/OnboardingSteps";
 
-const STEPS = [
-  { id: "location", title: "Location", icon: MapPin, optional: false },
-  { id: "household", title: "Household", icon: Users, optional: false },
-  { id: "lifestyle", title: "Lifestyle", icon: Sparkles, optional: false },
-  { id: "commute", title: "Daily Commute", icon: Route, optional: false },
-  { id: "indoor", title: "Indoor Environment", icon: Home, optional: true },
-  { id: "preferences", title: "Preferences", icon: Leaf, optional: true },
-] as const;
+function renderOnboardingStep(
+  stepIdx: number,
+  form: ReturnType<typeof useForm<OnboardingFormValues>>,
+  watchedValues: ReturnType<typeof useWatch<OnboardingFormValues>>
+) {
+  switch (stepIdx) {
+    case 0:
+      return <StepLocation form={form} watchedValues={watchedValues} />;
+    case 1:
+      return <StepHousehold form={form} watchedValues={watchedValues} />;
+    case 2:
+      return <StepLifestyle form={form} watchedValues={watchedValues} />;
+    case 3:
+      return <StepCommute form={form} watchedValues={watchedValues} />;
+    case 4:
+      return <StepIndoor form={form} watchedValues={watchedValues} />;
+    default:
+      return <StepPreferences form={form} />;
+  }
+}
 
+/**
+ * Multi-step Zod-validated onboarding wizard saving household and commute preferences locally.
+ */
 export function OnboardingWizard() {
   const router = useRouter();
   const { profile, isHydrated, updateProfile, notify } = useBreatheWise();
@@ -60,8 +66,8 @@ export function OnboardingWizard() {
   }, [isHydrated, profile, form]);
 
   const watchedValues = useWatch({ control: form.control });
-  const currentStep = STEPS[stepIdx]!;
-  const progressValue = ((stepIdx + 1) / STEPS.length) * 100;
+  const currentStep = ONBOARDING_STEPS[stepIdx] ?? ONBOARDING_STEPS[0];
+  const progressValue = ((stepIdx + 1) / ONBOARDING_STEPS.length) * 100;
 
   async function validateStep(index: number): Promise<boolean> {
     if (index === 0) return form.trigger(["city", "locality"]);
@@ -71,7 +77,7 @@ export function OnboardingWizard() {
 
   async function handleNext() {
     if (!(await validateStep(stepIdx))) return;
-    if (stepIdx < STEPS.length - 1) {
+    if (stepIdx < ONBOARDING_STEPS.length - 1) {
       setStepIdx((i) => i + 1);
     }
   }
@@ -105,14 +111,14 @@ export function OnboardingWizard() {
           <div className="mt-8">
             <div className="flex items-center justify-between text-xs font-medium text-[#4b5e56]">
               <span>
-                Step {stepIdx + 1} of {STEPS.length}: {currentStep.title}
+                Step {stepIdx + 1} of {ONBOARDING_STEPS.length}: {currentStep.title}
               </span>
               <span>{Math.round(progressValue)}% complete</span>
             </div>
             <Progress value={progressValue} aria-label="Onboarding progress" className="mt-2" />
 
             <nav aria-label="Onboarding steps" className="mt-4 hidden grid-cols-6 gap-2 sm:grid">
-              {STEPS.map((s, idx) => {
+              {ONBOARDING_STEPS.map((s, idx) => {
                 const Icon = s.icon;
                 const isActive = idx === stepIdx;
                 const isDone = idx < stepIdx;
@@ -149,12 +155,7 @@ export function OnboardingWizard() {
                     exit={{ opacity: 0, x: -10 }}
                     transition={{ duration: 0.2 }}
                   >
-                    {stepIdx === 0 && <StepLocation form={form} watchedValues={watchedValues} />}
-                    {stepIdx === 1 && <StepHousehold form={form} watchedValues={watchedValues} />}
-                    {stepIdx === 2 && <StepLifestyle form={form} watchedValues={watchedValues} />}
-                    {stepIdx === 3 && <StepCommute form={form} watchedValues={watchedValues} />}
-                    {stepIdx === 4 && <StepIndoor form={form} watchedValues={watchedValues} />}
-                    {stepIdx === 5 && <StepPreferences form={form} />}
+                    {renderOnboardingStep(stepIdx, form, watchedValues)}
                   </motion.div>
                 </AnimatePresence>
 
@@ -170,13 +171,13 @@ export function OnboardingWizard() {
                   </Button>
 
                   <div className="flex items-center gap-2.5">
-                    {currentStep.optional && stepIdx < STEPS.length - 1 && (
+                    {currentStep.optional && stepIdx < ONBOARDING_STEPS.length - 1 && (
                       <Button type="button" variant="ghost" onClick={handleNext}>
                         Skip optional step
                       </Button>
                     )}
 
-                    {stepIdx < STEPS.length - 1 ? (
+                    {stepIdx < ONBOARDING_STEPS.length - 1 ? (
                       <Button key="continue-btn" type="button" onClick={handleNext}>
                         Continue
                         <ArrowRight className="h-4 w-4" aria-hidden="true" />

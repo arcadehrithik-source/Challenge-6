@@ -1,3 +1,4 @@
+import { AQI_THRESHOLDS } from "../aqi";
 import type { AirQualitySnapshot, Recommendation, UserProfile } from "../types";
 
 export interface RecommendationContext {
@@ -76,6 +77,7 @@ function buildFitnessRecommendation(ctx: RecommendationContext): Recommendation 
   };
 }
 
+/** Builds outdoor activity recommendations based on user lifestyle and current AQI. */
 export function buildOutdoorRecommendations(ctx: RecommendationContext): Recommendation[] {
   const { airQuality, profile, aqi, isSevereOrVeryPoor, isModeratePlus } = ctx;
   const recs: Recommendation[] = [];
@@ -108,6 +110,7 @@ export function buildOutdoorRecommendations(ctx: RecommendationContext): Recomme
   return recs;
 }
 
+/** Builds household protection recommendations for families with children or senior citizens. */
 export function buildHouseholdRecommendations(ctx: RecommendationContext): Recommendation[] {
   const { airQuality, profile, aqi, isSevereOrVeryPoor, isPoorPlus, isModeratePlus } = ctx;
   const recs: Recommendation[] = [];
@@ -179,49 +182,48 @@ export function buildHouseholdRecommendations(ctx: RecommendationContext): Recom
   return recs;
 }
 
-export function buildCommuteRecommendations(ctx: RecommendationContext): Recommendation[] {
-  const { airQuality, profile, aqi, isSevereOrVeryPoor, isPoorPlus, isModeratePlus } = ctx;
-
-  if (profile.commute === "bicycle" || profile.commute === "walking") {
-    return [
-      isPoorPlus
-        ? {
-            id: "active-commute-switch",
-            title: `Pause ${profile.commute} commute today — switch to metro or closed-window transit`,
-            whatToDo: `For your ${profile.commuteDistanceKm} km trip, take metro/AC bus or carpool instead of ${profile.commute}. If you must walk short links, take quiet interior lanes and wear a fitted N95 mask.`,
-            whyItMatters:
-              "Cycling and brisk walking elevate breathing rate 2–4x directly in street-level emissions; during Poor/Severe AQI, elevated inhalation outweighs the short-term convenience.",
-            whenToDoIt: "Morning and evening commute legs while AQI exceeds 200.",
-            expectedBenefit:
-              "Avoids heavy street-level particulate dose while keeping per-passenger emissions low via public transit.",
-            difficulty: "Moderate",
-            estimatedCost: "₹20–₹60 transit fare",
-            environmentalImpact:
-              "Metro/bus keeps per-km emissions ~70–85% lower than driving solo.",
-            supportingData: `Current commute=${profile.commute} (${profile.commuteDistanceKm} km) at AQI ${aqi}.`,
-            priorityScore: 94,
-            urgency: isSevereOrVeryPoor ? "critical" : "high",
-            category: "commute",
-          }
-        : {
-            id: "active-commute-route",
-            title: "Choose quieter parallel lanes over high-traffic arterial roads",
-            whatToDo: `Keep your zero-emission ${profile.commute} commute, but shift one or two blocks off major diesel/bus corridors even if it adds 3–4 minutes.`,
-            whyItMatters:
-              "A slightly longer side-street route often has 30–50% lower tailpipe PM2.5 and NO2 than the shortest main-road route.",
-            whenToDoIt: "Daily commute.",
-            expectedBenefit: "Preserves zero-carbon transport while cutting traffic-plume spikes.",
-            difficulty: "Easy",
-            estimatedCost: "₹0",
-            environmentalImpact: `Avoids ~${(profile.commuteDistanceKm * 0.17 * 2).toFixed(1)} kg CO2/day vs solo car.`,
-            supportingData: `AQI ${aqi} (${airQuality.category}); active zero-emission commuter.`,
-            priorityScore: 80,
-            urgency: "medium",
-            category: "commute",
-          },
-    ];
+function buildActiveCommuteRec(ctx: RecommendationContext): Recommendation {
+  const { airQuality, profile, aqi, isSevereOrVeryPoor, isPoorPlus } = ctx;
+  if (isPoorPlus) {
+    return {
+      id: "active-commute-switch",
+      title: `Pause ${profile.commute} commute today — switch to metro or closed-window transit`,
+      whatToDo: `For your ${profile.commuteDistanceKm} km trip, take metro/AC bus or carpool instead of ${profile.commute}. If you must walk short links, take quiet interior lanes and wear a fitted N95 mask.`,
+      whyItMatters:
+        "Cycling and brisk walking elevate breathing rate 2–4x directly in street-level emissions; during Poor/Severe AQI, elevated inhalation outweighs the short-term convenience.",
+      whenToDoIt: `Morning and evening commute legs while AQI exceeds ${AQI_THRESHOLDS.MODERATE_MAX}.`,
+      expectedBenefit:
+        "Avoids heavy street-level particulate dose while keeping per-passenger emissions low via public transit.",
+      difficulty: "Moderate",
+      estimatedCost: "₹20–₹60 transit fare",
+      environmentalImpact: "Metro/bus keeps per-km emissions ~70–85% lower than driving solo.",
+      supportingData: `Current commute=${profile.commute} (${profile.commuteDistanceKm} km) at AQI ${aqi}.`,
+      priorityScore: 94,
+      urgency: isSevereOrVeryPoor ? "critical" : "high",
+      category: "commute",
+    };
   }
 
+  return {
+    id: "active-commute-route",
+    title: "Choose quieter parallel lanes over high-traffic arterial roads",
+    whatToDo: `Keep your zero-emission ${profile.commute} commute, but shift one or two blocks off major diesel/bus corridors even if it adds 3–4 minutes.`,
+    whyItMatters:
+      "A slightly longer side-street route often has 30–50% lower tailpipe PM2.5 and NO2 than the shortest main-road route.",
+    whenToDoIt: "Daily commute.",
+    expectedBenefit: "Preserves zero-carbon transport while cutting traffic-plume spikes.",
+    difficulty: "Easy",
+    estimatedCost: "₹0",
+    environmentalImpact: `Avoids ~${(profile.commuteDistanceKm * 0.17 * 2).toFixed(1)} kg CO2/day vs solo car.`,
+    supportingData: `AQI ${aqi} (${airQuality.category}); active zero-emission commuter.`,
+    priorityScore: 80,
+    urgency: "medium",
+    category: "commute",
+  };
+}
+
+function buildMotorizedCommuteRec(ctx: RecommendationContext): Recommendation[] {
+  const { airQuality, profile, aqi, isPoorPlus, isModeratePlus } = ctx;
   if (profile.commute === "two_wheeler" && isModeratePlus) {
     return [
       {
@@ -230,7 +232,7 @@ export function buildCommuteRecommendations(ctx: RecommendationContext): Recomme
         whatToDo:
           "Switch to metro/bus on days above AQI 200; when riding, pair a closed-visor helmet with a fitted N95 mask and avoid tailgating heavy buses/trucks.",
         whyItMatters: "Two-wheeler riders sit at exhaust-pipe height with zero cabin filtration.",
-        whenToDoIt: "Every ride while AQI is above 100.",
+        whenToDoIt: `Every ride while AQI is above ${AQI_THRESHOLDS.SATISFACTORY_MAX}.`,
         expectedBenefit: "Reduces direct exhaust and road-dust inhalation.",
         difficulty: "Easy",
         estimatedCost: "₹40–₹100 mask or transit fare",
@@ -290,6 +292,14 @@ export function buildCommuteRecommendations(ctx: RecommendationContext): Recomme
   return [];
 }
 
+/** Builds commute-mode recommendations balancing exposure reduction and per-trip emissions. */
+export function buildCommuteRecommendations(ctx: RecommendationContext): Recommendation[] {
+  if (ctx.profile.commute === "bicycle" || ctx.profile.commute === "walking") {
+    return [buildActiveCommuteRec(ctx)];
+  }
+  return buildMotorizedCommuteRec(ctx);
+}
+
 function buildPurifierOrSourceControlRec(ctx: RecommendationContext): Recommendation {
   const { airQuality, profile, aqi, isPoorPlus, lowBudget } = ctx;
   if (profile.indoorEnvironment.hasAirPurifier) {
@@ -324,7 +334,7 @@ function buildPurifierOrSourceControlRec(ctx: RecommendationContext): Recommenda
       "Seal obvious window/door gaps with weatherstripping or damp towels during severe smog, damp-mop floors instead of dry sweeping, eliminate incense/agarbatti/mosquito coils, and consider a DIY MERV-13 box-fan filter if budget allows.",
     whyItMatters:
       "Stopping indoor combustion and resuspension is free and removes major indoor PM2.5 peaks. Note: houseplants alone cannot meaningfully purify room air—you need source control plus physical filtration.",
-    whenToDoIt: "Daily cleaning and whenever outdoor AQI exceeds 150.",
+    whenToDoIt: `Daily cleaning and whenever outdoor AQI exceeds ${AQI_THRESHOLDS.CAUTION_ACTIVE}.`,
     expectedBenefit: "Prevents indoor air from becoming worse than outdoor air at near-zero cost.",
     difficulty: "Easy",
     estimatedCost: lowBudget
@@ -339,6 +349,7 @@ function buildPurifierOrSourceControlRec(ctx: RecommendationContext): Recommenda
   };
 }
 
+/** Builds indoor air filtration, source-control, and ventilation window recommendations. */
 export function buildIndoorRecommendations(ctx: RecommendationContext): Recommendation[] {
   const { airQuality, profile, aqi, isSevereOrVeryPoor, isPoorPlus } = ctx;
   const recs: Recommendation[] = [buildPurifierOrSourceControlRec(ctx)];
@@ -387,6 +398,7 @@ export function buildIndoorRecommendations(ctx: RecommendationContext): Recommen
   return recs;
 }
 
+/** Builds cooking-exhaust safety and low-emission sustainability habit recommendations. */
 export function buildCookingAndSustainabilityRecommendations(
   ctx: RecommendationContext
 ): Recommendation[] {

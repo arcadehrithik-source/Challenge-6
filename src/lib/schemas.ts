@@ -51,23 +51,27 @@ const sustainabilityPrioritySchema = z.enum([
 
 const demoScenarioSchema = z.enum(["auto", "good", "moderate", "poor", "severe"]);
 
-const indoorEnvironmentSchema = z.object({
-  hasAirPurifier: z.boolean(),
-  hasIndoorPlants: z.boolean(),
-  windowsFrequentlyOpen: z.boolean(),
-  cookingFuel: cookingFuelSchema,
-  ventilation: ventilationLevelSchema,
-});
+const indoorEnvironmentSchema = z
+  .object({
+    hasAirPurifier: z.boolean(),
+    hasIndoorPlants: z.boolean(),
+    windowsFrequentlyOpen: z.boolean(),
+    cookingFuel: cookingFuelSchema,
+    ventilation: ventilationLevelSchema,
+  })
+  .strict();
 
-const userPreferencesSchema = z.object({
-  dailyNotifications: z.boolean(),
-  notificationTime: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/, "Use HH:MM format")
-    .default("07:30"),
-  sustainabilityPriority: sustainabilityPrioritySchema,
-  budget: budgetPreferenceSchema,
-});
+const userPreferencesSchema = z
+  .object({
+    dailyNotifications: z.boolean(),
+    notificationTime: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/, "Use HH:MM format")
+      .default("07:30"),
+    sustainabilityPriority: sustainabilityPrioritySchema,
+    budget: budgetPreferenceSchema,
+  })
+  .strict();
 
 /**
  * Normalizes blank query strings to undefined before coercing to a finite bounded number,
@@ -150,28 +154,32 @@ export const airQualitySnapshotSchema = z.object({
   fallbackReason: z.string().optional(),
 });
 
-export const assistantRequestSchema = z.object({
-  question: z
-    .string()
-    .trim()
-    .min(3, "Please ask a question of at least 3 characters.")
-    .max(600, "Question must be 600 characters or fewer."),
-  context: z.object({
-    location: z.string().trim().min(2).max(120),
-    aqi: z.number().finite().min(0).max(500),
-    aqiCategory: aqiCategorySchema,
-    pm25: z.number().finite().min(0).max(2000).nullable(),
-    pm10: z.number().finite().min(0).max(2000).nullable(),
-    dataMode: z.enum(["live", "demo"]),
-    updatedAt: z.string().trim().max(64),
-    household: householdTypeSchema,
-    lifestyle: lifestyleTypeSchema,
-    commute: commuteModeSchema,
-    commuteDistanceKm: z.number().finite().min(0).max(120).optional().default(8),
-    indoorEnvironment: indoorEnvironmentSchema,
-    preferences: userPreferencesSchema.omit({ notificationTime: true }),
-  }),
-});
+export const assistantRequestSchema = z
+  .object({
+    question: z
+      .string()
+      .trim()
+      .min(3, "Please ask a question of at least 3 characters.")
+      .max(600, "Question must be 600 characters or fewer."),
+    context: z
+      .object({
+        location: z.string().trim().min(2).max(120),
+        aqi: z.number().finite().min(0).max(500),
+        aqiCategory: aqiCategorySchema,
+        pm25: z.number().finite().min(0).max(2000).nullable(),
+        pm10: z.number().finite().min(0).max(2000).nullable(),
+        dataMode: z.enum(["live", "demo"]),
+        updatedAt: z.string().trim().max(64),
+        household: householdTypeSchema,
+        lifestyle: lifestyleTypeSchema,
+        commute: commuteModeSchema,
+        commuteDistanceKm: z.number().finite().min(0).max(120).optional().default(8),
+        indoorEnvironment: indoorEnvironmentSchema,
+        preferences: userPreferencesSchema.omit({ notificationTime: true }).strict(),
+      })
+      .strict(),
+  })
+  .strict();
 
 export const assistantStructuredResponseSchema = z.object({
   situationAssessment: z.string().min(1),

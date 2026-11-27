@@ -15,7 +15,13 @@ export async function GET() {
         aiMode: env.AI_PROVIDER,
         timestamp: new Date().toISOString(),
       },
-      { status: 200 }
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store",
+          "X-Content-Type-Options": "nosniff",
+        },
+      }
     );
   } catch (error) {
     return NextResponse.json(

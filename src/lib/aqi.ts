@@ -7,6 +7,17 @@ interface Breakpoint {
   iHigh: number;
 }
 
+/** Central Indian NAQI (CPCB) threshold constants shared across engines and UI views. */
+export const AQI_THRESHOLDS = {
+  GOOD_MAX: 50,
+  SATISFACTORY_MAX: 100,
+  CAUTION_ACTIVE: 150,
+  MODERATE_MAX: 200,
+  POOR_MAX: 300,
+  VERY_POOR_MAX: 400,
+  MAX: 500,
+} as const;
+
 // Indian National Air Quality Index (CPCB) sub-index breakpoints.
 const PM25_BREAKPOINTS: Breakpoint[] = [
   { cLow: 0, cHigh: 30, iLow: 0, iHigh: 50 },
@@ -56,9 +67,12 @@ function computeSubIndex(concentration: number | null, table: Breakpoint[]): num
     }
   }
 
-  return 500;
+  return AQI_THRESHOLDS.MAX;
 }
 
+/**
+ * Calculates overall Indian NAQI score, CPCB category, and dominant pollutant driver.
+ */
 export function calculateIndianAqi(pollutants: {
   pm25: number | null;
   pm10: number | null;
@@ -76,7 +90,9 @@ export function calculateIndianAqi(pollutants: {
     (entry): entry is { code: PollutantCode; index: number } => entry.index !== null
   );
 
-  if (valid.length === 0) {
+  valid.sort((a, b) => b.index - a.index);
+  const top = valid[0];
+  if (!top) {
     return {
       aqi: 0,
       category: "Good",
@@ -84,9 +100,7 @@ export function calculateIndianAqi(pollutants: {
     };
   }
 
-  valid.sort((a, b) => b.index - a.index);
-  const top = valid[0]!;
-  const boundedAqi = Math.min(500, Math.max(0, top.index));
+  const boundedAqi = Math.min(AQI_THRESHOLDS.MAX, Math.max(0, top.index));
 
   return {
     aqi: boundedAqi,
@@ -95,12 +109,15 @@ export function calculateIndianAqi(pollutants: {
   };
 }
 
+/**
+ * Maps a numeric AQI value onto its official CPCB Indian NAQI category label.
+ */
 export function getAqiCategory(aqi: number): AqiCategory {
-  if (aqi <= 50) return "Good";
-  if (aqi <= 100) return "Satisfactory";
-  if (aqi <= 200) return "Moderate";
-  if (aqi <= 300) return "Poor";
-  if (aqi <= 400) return "Very Poor";
+  if (aqi <= AQI_THRESHOLDS.GOOD_MAX) return "Good";
+  if (aqi <= AQI_THRESHOLDS.SATISFACTORY_MAX) return "Satisfactory";
+  if (aqi <= AQI_THRESHOLDS.MODERATE_MAX) return "Moderate";
+  if (aqi <= AQI_THRESHOLDS.POOR_MAX) return "Poor";
+  if (aqi <= AQI_THRESHOLDS.VERY_POOR_MAX) return "Very Poor";
   return "Severe";
 }
 
@@ -114,6 +131,9 @@ interface AqiCategoryMeta {
   borderClass: string;
 }
 
+/**
+ * Visual styling, range metadata, and advisory text per CPCB category.
+ */
 export const AQI_CATEGORY_META: Record<AqiCategory, AqiCategoryMeta> = {
   Good: {
     category: "Good",
@@ -177,16 +197,24 @@ export const AQI_CATEGORY_META: Record<AqiCategory, AqiCategoryMeta> = {
   },
 };
 
+const POLLUTANT_NOTES: Record<PollutantCode, string> = {
+  "PM2.5": "Fine particulate matter",
+  PM10: "Coarse inhalable dust and particulates",
+  NO2: "Nitrogen dioxide",
+  O3: "Ground-level ozone",
+};
+
+const POLLUTANT_CONTEXT: Record<PollutantCode, string> = {
+  "PM2.5": "small enough to penetrate deep into airways and indoor spaces.",
+  PM10: "often elevated near construction, dry roads, and traffic.",
+  NO2: "linked primarily to vehicle exhaust and urban combustion.",
+  O3: "that typically peaks during sunny afternoon hours.",
+};
+
+/**
+ * Formats a plain-English pollutant card explanation given code and concentration (µg/m³).
+ */
 export function describePollutant(code: PollutantCode, value: number | null): string {
   const formatted = value !== null ? `${value.toFixed(1)} µg/m³` : "Unavailable";
-  switch (code) {
-    case "PM2.5":
-      return `Fine particulate matter (${formatted}) small enough to penetrate deep into airways and indoor spaces.`;
-    case "PM10":
-      return `Coarse inhalable dust and particulates (${formatted}) often elevated near construction, dry roads, and traffic.`;
-    case "NO2":
-      return `Nitrogen dioxide (${formatted}) linked primarily to vehicle exhaust and urban combustion.`;
-    case "O3":
-      return `Ground-level ozone (${formatted}) that typically peaks during sunny afternoon hours.`;
-  }
+  return `${POLLUTANT_NOTES[code]} (${formatted}) ${POLLUTANT_CONTEXT[code]}`;
 }

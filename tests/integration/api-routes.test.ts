@@ -86,6 +86,17 @@ describe("API Route validation, fallback, and rate limiting", () => {
     const badRes = await postAssistant(badReq);
     expect(badRes.status).toBe(400);
 
+    // Unexpected extra keys must be rejected by strict Zod schema
+    const extraKeyReq = new NextRequest("http://localhost:3000/api/assistant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-forwarded-for": "10.0.0.21" },
+      body: JSON.stringify({
+        ...VALID_ASSISTANT_BODY,
+        injectedRole: "admin",
+      }),
+    });
+    expect((await postAssistant(extraKeyReq)).status).toBe(400);
+
     const hugeReq = new NextRequest("http://localhost:3000/api/assistant", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-forwarded-for": "10.0.0.3" },

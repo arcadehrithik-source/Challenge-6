@@ -7,6 +7,13 @@ import { Label } from "@/components/ui/label";
 import { SUPPORTED_CITIES } from "@/lib/cities";
 import { userProfileSchema } from "@/lib/schemas";
 import type { UserProfile } from "@/lib/types";
+import {
+  COMMUTE_MODES,
+  HOUSEHOLD_OPTIONS,
+  INDOOR_TOGGLES,
+  LIFESTYLE_OPTIONS,
+  type OnboardingCardOption,
+} from "../onboarding-config";
 
 export type OnboardingFormValues = z.input<typeof userProfileSchema>;
 
@@ -25,18 +32,12 @@ interface StepProps {
   watchedValues: WatchedOnboardingValues;
 }
 
-interface CardOption<T extends string> {
-  value: T;
-  label: string;
-  desc: string;
-}
-
 function OptionCardGrid<T extends string>({
   options,
   selectedValue,
   onSelect,
 }: {
-  options: ReadonlyArray<CardOption<T>>;
+  options: ReadonlyArray<OnboardingCardOption<T>>;
   selectedValue: T | undefined;
   onSelect: (value: T) => void;
 }) {
@@ -65,51 +66,7 @@ function OptionCardGrid<T extends string>({
   );
 }
 
-const HOUSEHOLD_OPTIONS: ReadonlyArray<CardOption<UserProfile["household"]>> = [
-  { value: "individual", label: "Individual", desc: "Solo daily planning" },
-  { value: "couple", label: "Couple", desc: "Two-adult household" },
-  { value: "family", label: "Family", desc: "Multi-member home" },
-  {
-    value: "family_with_children",
-    label: "Family with children",
-    desc: "Prioritizes school transit & play windows",
-  },
-  {
-    value: "household_with_seniors",
-    label: "Household with senior citizens",
-    desc: "Prioritizes indoor stability & walk timing",
-  },
-];
-
-const LIFESTYLE_OPTIONS: ReadonlyArray<CardOption<UserProfile["lifestyle"]>> = [
-  {
-    value: "office_commuter",
-    label: "Office Commuter",
-    desc: "Peak-hour travel & indoor office",
-  },
-  { value: "student", label: "Student", desc: "School/college transit & campus time" },
-  {
-    value: "remote_worker",
-    label: "Remote Worker",
-    desc: "High focus on indoor air & ventilation",
-  },
-  { value: "outdoor_worker", label: "Outdoor Worker", desc: "Extended outdoor shift protection" },
-  {
-    value: "fitness_enthusiast",
-    label: "Fitness Enthusiast",
-    desc: "High-ventilation exercise timing",
-  },
-];
-
-const COMMUTE_MODES: ReadonlyArray<{ value: UserProfile["commute"]; label: string }> = [
-  { value: "walking", label: "Walking" },
-  { value: "bicycle", label: "Bicycle" },
-  { value: "public_transport", label: "Public Transport" },
-  { value: "two_wheeler", label: "Two-Wheeler" },
-  { value: "car", label: "Car" },
-  { value: "work_from_home", label: "Work from Home" },
-];
-
+/** Step 1: City preset chips or custom city/locality location selection. */
 export function StepLocation({ form, watchedValues }: StepProps) {
   const cityError = form.formState.errors.city?.message;
   return (
@@ -189,6 +146,7 @@ export function StepLocation({ form, watchedValues }: StepProps) {
   );
 }
 
+/** Step 2: Household composition selection for vulnerability-aware recommendations. */
 export function StepHousehold({ form, watchedValues }: StepProps) {
   return (
     <div className="space-y-4">
@@ -207,6 +165,7 @@ export function StepHousehold({ form, watchedValues }: StepProps) {
   );
 }
 
+/** Step 3: Daily activity profile selection. */
 export function StepLifestyle({ form, watchedValues }: StepProps) {
   return (
     <div className="space-y-4">
@@ -227,9 +186,9 @@ export function StepLifestyle({ form, watchedValues }: StepProps) {
   );
 }
 
+/** Step 4: Commute mode and one-way trip distance configuration. */
 export function StepCommute({ form, watchedValues }: StepProps) {
   const distError = form.formState.errors.commuteDistanceKm?.message;
-
   return (
     <div className="space-y-5">
       <div>
@@ -281,13 +240,8 @@ export function StepCommute({ form, watchedValues }: StepProps) {
   );
 }
 
+/** Step 5 (Optional): Indoor equipment, ventilation habits, and cooking fuel profile. */
 export function StepIndoor({ form, watchedValues }: StepProps) {
-  const toggles = [
-    { key: "hasAirPurifier" as const, label: "HEPA air purifier at home" },
-    { key: "hasIndoorPlants" as const, label: "Indoor plants present" },
-    { key: "windowsFrequentlyOpen" as const, label: "Windows kept open often" },
-  ];
-
   return (
     <div className="space-y-5">
       <div>
@@ -299,7 +253,7 @@ export function StepIndoor({ form, watchedValues }: StepProps) {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        {toggles.map((toggle) => {
+        {INDOOR_TOGGLES.map((toggle) => {
           const checked = Boolean(watchedValues.indoorEnvironment?.[toggle.key]);
           return (
             <button
@@ -358,6 +312,7 @@ export function StepIndoor({ form, watchedValues }: StepProps) {
   );
 }
 
+/** Step 6 (Optional): Sustainability priority, recommendation budget, and briefing schedule. */
 export function StepPreferences({ form }: Pick<StepProps, "form">) {
   return (
     <div className="space-y-5">

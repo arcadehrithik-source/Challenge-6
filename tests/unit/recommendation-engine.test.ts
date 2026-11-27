@@ -77,6 +77,25 @@ describe("Context-aware recommendation engine", () => {
 
     const checklist = buildDefaultChecklist(POOR_AIR_FIXTURE, DEFAULT_USER_PROFILE);
     expect(checklist.length).toBeGreaterThanOrEqual(5);
+
+    const inductionNoNotifyProfile = {
+      ...DEFAULT_USER_PROFILE,
+      commute: "car" as const,
+      indoorEnvironment: {
+        ...DEFAULT_USER_PROFILE.indoorEnvironment,
+        cookingFuel: "electric_induction" as const,
+        hasAirPurifier: true,
+      },
+      preferences: {
+        ...DEFAULT_USER_PROFILE.preferences,
+        dailyNotifications: false,
+        sustainabilityPriority: "reduce_emissions" as const,
+      },
+    };
+    const goodSlots = generateDailySlotPlan(GOOD_AIR_FIXTURE, inductionNoNotifyProfile);
+    expect(goodSlots[1]?.actions.some((a) => a.includes("Keep lids on pots"))).toBe(true);
+    const shortChecklist = buildDefaultChecklist(GOOD_AIR_FIXTURE, inductionNoNotifyProfile);
+    expect(shortChecklist.some((item) => item.id === "chk-energy-standby")).toBe(false);
   });
 
   it("handles outdoor worker, two-wheeler, car, and solid biomass cooking profiles", () => {

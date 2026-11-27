@@ -1,3 +1,4 @@
+import { AQI_THRESHOLDS } from "./aqi";
 import {
   buildCommuteRecommendations,
   buildCookingAndSustainabilityRecommendations,
@@ -15,6 +16,9 @@ import type {
   UserProfile,
 } from "./types";
 
+/**
+ * Baseline default user profile used before onboarding completion or after local reset.
+ */
 export const DEFAULT_USER_PROFILE: UserProfile = {
   city: "Kolkata",
   locality: "Salt Lake Sector V",
@@ -93,7 +97,7 @@ export function computeExposureIndicator(
   airQuality: AirQualitySnapshot,
   profile: UserProfile
 ): ExposureIndicator {
-  let score = Math.round((airQuality.aqi / 500) * 65);
+  let score = Math.round((airQuality.aqi / AQI_THRESHOLDS.MAX) * 65);
   const rationale: string[] = [
     `Current ${airQuality.city} AQI is ${airQuality.aqi} (${airQuality.category}), driven primarily by ${airQuality.mainPollutant}.`,
   ];
@@ -126,7 +130,7 @@ export function computeExposureIndicator(
     );
   }
 
-  if (!profile.indoorEnvironment.hasAirPurifier && airQuality.aqi > 200) {
+  if (!profile.indoorEnvironment.hasAirPurifier && airQuality.aqi > AQI_THRESHOLDS.MODERATE_MAX) {
     score += 7;
     rationale.push(
       "No mechanical HEPA purifier is configured; sealing peak smog infiltration and cooking exhaust becomes essential."
@@ -168,9 +172,9 @@ export function generateRecommendations(
     hourOfDay,
     aqi,
     pm25Text: airQuality.pm25 !== null ? `${airQuality.pm25.toFixed(1)} µg/m³` : "elevated levels",
-    isSevereOrVeryPoor: aqi > 300,
-    isPoorPlus: aqi > 200,
-    isModeratePlus: aqi > 100,
+    isSevereOrVeryPoor: aqi > AQI_THRESHOLDS.POOR_MAX,
+    isPoorPlus: aqi > AQI_THRESHOLDS.MODERATE_MAX,
+    isModeratePlus: aqi > AQI_THRESHOLDS.SATISFACTORY_MAX,
     lowBudget: profile.preferences.budget === "zero_low_cost",
   };
 
@@ -190,7 +194,94 @@ function getSlotRisk(
 ): DailySlotPlan["riskLevel"] {
   if (aqi > highThreshold) return "High";
   if (aqi > modThreshold) return "Elevated";
-  return aqi > 100 ? "Moderate" : "Low";
+  return aqi > AQI_THRESHOLDS.SATISFACTORY_MAX ? "Moderate" : "Low";
+}
+
+function buildMorningSlot(aqi: number, profile: UserProfile): DailySlotPlan {
+  const activeCommuter = profile.commute === "bicycle" || profile.commute === "walking";
+  const poor = aqi > AQI_THRESHOLDS.MODERATE_MAX;
+  const commuteAdvice = activeCommuter
+    ? poor
+      ? "Use closed transit or N95 mask on side streets."
+      : "Prefer tree-lined interior streets."
+    : "Keep cabin AC on recirculate in traffic.";
+
+  return {
+    slot: "Morning",
+    timeRange: "06:00 – 10:30",
+    riskLevel: getSlotRisk(aqi, AQI_THRESHOLDS.MODERATE_MAX, AQI_THRESHOLDS.SATISFACTORY_MAX),
+    summary:
+      aqi > AQI_THRESHOLDS.SATISFACTORY_MAX
+        ? "Cool morning inversion typically traps PM2.5 near street level."
+        : "Crisp morning conditions — safe for routine commute and errands.",
+    actions: [
+      profile.lifestyle === "fitness_enthusiast" && aqi > AQI_THRESHOLDS.CAUTION_ACTIVE
+        ? "Move morning run indoors."
+        : "Check live AQI before stepping out.",
+      commuteAdvice,
+    ],
+    ventilationAdvice:
+      aqi > AQI_THRESHOLDS.CAUTION_ACTIVE
+        ? "Keep outer windows closed until late morning warmth disperses ground haze."
+        : "Safe for 20-minute morning fresh-air flush.",
+  };
+}
+
+function buildAfternoonSlot(aqi: number, profile: UserProfile): DailySlotPlan {
+  const severe = aqi > AQI_THRESHOLDS.POOR_MAX;
+  const poor = aqi > AQI_THRESHOLDS.MODERATE_MAX;
+  return {
+    slot: "Afternoon",
+    timeRange: "11:30 – 16:00",
+    riskLevel: severe ? "Elevated" : poor ? "Moderate" : "Low",
+    summary: "Daytime warming usually offers the best atmospheric mixing window of the day.",
+    actions: [
+      "Schedule essential outdoor errands or short walks in this window.",
+      profile.indoorEnvironment.cookingFuel !== "electric_induction"
+        ? "Run kitchen exhaust during lunch prep."
+        : "Keep lids on pots for faster, cleaner cooking.",
+    ],
+    ventilationAdvice: severe
+      ? "Keep airing brief (10 mins) only if outdoor visibility improves; run purifier after."
+      : "Best window to open opposite windows for 20–30 minutes to flush indoor CO2.",
+  };
+}
+
+function buildEveningSlot(aqi: number, profile: UserProfile): DailySlotPlan {
+  return {
+    slot: "Evening",
+    timeRange: "16:30 – 20:30",
+    riskLevel:
+      aqi > AQI_THRESHOLDS.MODERATE_MAX
+        ? "High"
+        : aqi > AQI_THRESHOLDS.SATISFACTORY_MAX
+          ? "Elevated"
+          : "Moderate",
+    summary: "Rush-hour traffic overlaps with cooling boundary layer — particulates climb rapidly.",
+    actions: [
+      profile.household === "family_with_children"
+        ? "Shift children's play indoors before sunset."
+        : "Avoid lingering near busy intersections.",
+      "Use damp cloth dusting instead of dry sweeping.",
+    ],
+    ventilationAdvice: "Close street-facing windows before 17:30 to prevent evening smog trap.",
+  };
+}
+
+function buildNightSlot(aqi: number, profile: UserProfile): DailySlotPlan {
+  return {
+    slot: "Night",
+    timeRange: "21:00 – 05:30",
+    riskLevel: getSlotRisk(aqi, AQI_THRESHOLDS.POOR_MAX, AQI_THRESHOLDS.MODERATE_MAX),
+    summary: "Calm night winds allow particulates to settle indoors if frames are unsealed.",
+    actions: [
+      profile.indoorEnvironment.hasAirPurifier
+        ? "Run HEPA purifier in bedroom with door closed."
+        : "Seal door gaps and avoid incense/mosquito coils indoors.",
+      "Prepare next-day commute mask & low-emission plan.",
+    ],
+    ventilationAdvice: `Keep bedroom windows closed overnight when outdoor AQI exceeds ${AQI_THRESHOLDS.CAUTION_ACTIVE}.`,
+  };
 }
 
 /**
@@ -201,76 +292,11 @@ export function generateDailySlotPlan(
   profile: UserProfile
 ): DailySlotPlan[] {
   const aqi = airQuality.aqi;
-  const severe = aqi > 300;
-  const poor = aqi > 200;
-  const activeCommuter = profile.commute === "bicycle" || profile.commute === "walking";
-
   return [
-    {
-      slot: "Morning",
-      timeRange: "06:00 – 10:30",
-      riskLevel: getSlotRisk(aqi, 200, 100),
-      summary:
-        aqi > 100
-          ? "Cool morning inversion typically traps PM2.5 near street level."
-          : "Crisp morning conditions — safe for routine commute and errands.",
-      actions: [
-        profile.lifestyle === "fitness_enthusiast" && aqi > 150
-          ? "Move morning run indoors."
-          : "Check live AQI before stepping out.",
-        activeCommuter
-          ? poor
-            ? "Use closed transit or N95 mask on side streets."
-            : "Prefer tree-lined interior streets."
-          : "Keep cabin AC on recirculate in traffic.",
-      ],
-      ventilationAdvice:
-        aqi > 150
-          ? "Keep outer windows closed until late morning warmth disperses ground haze."
-          : "Safe for 20-minute morning fresh-air flush.",
-    },
-    {
-      slot: "Afternoon",
-      timeRange: "11:30 – 16:00",
-      riskLevel: severe ? "Elevated" : poor ? "Moderate" : "Low",
-      summary: "Daytime warming usually offers the best atmospheric mixing window of the day.",
-      actions: [
-        "Schedule essential outdoor errands or short walks in this window.",
-        profile.indoorEnvironment.cookingFuel !== "electric_induction"
-          ? "Run kitchen exhaust during lunch prep."
-          : "Keep lids on pots for faster, cleaner cooking.",
-      ],
-      ventilationAdvice: severe
-        ? "Keep airing brief (10 mins) only if outdoor visibility improves; run purifier after."
-        : "Best window to open opposite windows for 20–30 minutes to flush indoor CO2.",
-    },
-    {
-      slot: "Evening",
-      timeRange: "16:30 – 20:30",
-      riskLevel: severe || poor ? "High" : aqi > 100 ? "Elevated" : "Moderate",
-      summary:
-        "Rush-hour traffic overlaps with cooling boundary layer — particulates climb rapidly.",
-      actions: [
-        profile.household === "family_with_children"
-          ? "Shift children's play indoors before sunset."
-          : "Avoid lingering near busy intersections.",
-        "Use damp cloth dusting instead of dry sweeping.",
-      ],
-      ventilationAdvice: "Close street-facing windows before 17:30 to prevent evening smog trap.",
-    },
-    {
-      slot: "Night",
-      timeRange: "21:00 – 05:30",
-      riskLevel: getSlotRisk(aqi, 300, 200),
-      summary: "Calm night winds allow particulates to settle indoors if frames are unsealed.",
-      actions: [
-        profile.indoorEnvironment.hasAirPurifier
-          ? "Run HEPA purifier in bedroom with door closed."
-          : "Seal door gaps and avoid incense/mosquito coils indoors.",
-        "Prepare next-day commute mask & low-emission plan.",
-      ],
-      ventilationAdvice: "Keep bedroom windows closed overnight when outdoor AQI exceeds 150.",
-    },
+    buildMorningSlot(aqi, profile),
+    buildAfternoonSlot(aqi, profile),
+    buildEveningSlot(aqi, profile),
+    buildNightSlot(aqi, profile),
   ];
 }
 
@@ -309,7 +335,7 @@ export function buildDefaultChecklist(
     {
       id: "chk-window-timing",
       label:
-        airQuality.aqi > 150
+        airQuality.aqi > AQI_THRESHOLDS.CAUTION_ACTIVE
           ? "Close windows during peak smog & ventilate briefly midday (13:00–15:30)"
           : "Cross-ventilate home naturally for 30 minutes instead of running AC",
       category: "energy",

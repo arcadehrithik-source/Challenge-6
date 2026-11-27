@@ -1,14 +1,6 @@
 "use client";
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { MotionConfig } from "framer-motion";
 import { buildDemoAirQualitySnapshot } from "@/lib/air-quality-service";
 import { calculateImpactMetrics } from "@/lib/commute-impact";
@@ -39,12 +31,7 @@ import type {
   Recommendation,
   UserProfile,
 } from "@/lib/types";
-
-interface ToastMessage {
-  id: string;
-  title: string;
-  description?: string;
-}
+import { useToastQueue } from "./useToastQueue";
 
 interface BreatheWiseContextValue {
   profile: UserProfile;
@@ -90,6 +77,21 @@ function buildAirQualitySearchParams(
   return params;
 }
 
+function buildPendingCitySnapshot(targetProfile: UserProfile): AirQualitySnapshot {
+  return buildDemoAirQualitySnapshot({
+    city: targetProfile.city,
+    locality: targetProfile.locality,
+    latitude: targetProfile.latitude,
+    longitude: targetProfile.longitude,
+    scenario: targetProfile.demoScenario ?? "auto",
+    reason: `Loading air quality data for ${targetProfile.city}...`,
+  });
+}
+
+/**
+ * Root React context provider managing local user profile, live/demo AQI feed,
+ * derived exposure/recommendation plans, checklist streaks, and status toasts.
+ */
 export function BreatheWiseProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_USER_PROFILE);
   const [dataMode, setDataMode] = useState<"live" | "demo">("live");
@@ -108,51 +110,20 @@ export function BreatheWiseProvider({ children }: { children: React.ReactNode })
   const [checklistMap, setChecklistMap] = useState<Record<string, boolean>>({});
   const [streakDays, setStreakDays] = useState(0);
   const [assistantOpen, setAssistantOpen] = useState(false);
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const toastTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
-
-  useEffect(() => {
-    const timers = toastTimersRef.current;
-    return () => {
-      for (const timer of timers) {
-        clearTimeout(timer);
-      }
-      timers.clear();
-    };
-  }, []);
-
-  const notify = useCallback((title: string, description?: string) => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    setToasts((prev) => [...prev, { id, title, description }]);
-    const timer = setTimeout(() => {
-      toastTimersRef.current.delete(timer);
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
-    toastTimersRef.current.add(timer);
-  }, []);
+  const { toasts, notify } = useToastQueue();
 
   const fetchSnapshot = useCallback(
     async (targetProfile: UserProfile, targetMode: "live" | "demo") => {
       setIsLoadingAirQuality(true);
       setAirQualityError(null);
-      setAirQuality((prev) => {
-        if (prev.city.toLowerCase() === targetProfile.city.trim().toLowerCase()) {
-          return prev;
-        }
-        return buildDemoAirQualitySnapshot({
-          city: targetProfile.city,
-          locality: targetProfile.locality,
-          latitude: targetProfile.latitude,
-          longitude: targetProfile.longitude,
-          scenario: targetProfile.demoScenario ?? "auto",
-          reason: `Loading air quality data for ${targetProfile.city}...`,
-        });
-      });
+      setAirQuality((prev) =>
+        prev.city.toLowerCase() === targetProfile.city.trim().toLowerCase()
+          ? prev
+          : buildPendingCitySnapshot(targetProfile)
+      );
       try {
         const params = buildAirQualitySearchParams(targetProfile, targetMode);
-        const res = await fetch(`/api/air-quality?${params.toString()}`, {
-          cache: "no-store",
-        });
+        const res = await fetch(`/api/air-quality?${params.toString()}`, { cache: "no-store" });
         if (!res.ok) {
           throw new Error(`Air quality service returned ${res.status}`);
         }
@@ -221,8 +192,7 @@ export function BreatheWiseProvider({ children }: { children: React.ReactNode })
   const refreshAirQuality = useCallback(
     async (overrideCity?: string, overrideMode?: "live" | "demo") => {
       const targetProfile = overrideCity ? { ...profile, city: overrideCity } : profile;
-      const targetMode = overrideMode ?? dataMode;
-      await fetchSnapshot(targetProfile, targetMode);
+      await fetchSnapshot(targetProfile, overrideMode ?? dataMode);
     },
     [dataMode, fetchSnapshot, profile]
   );
@@ -244,10 +214,7 @@ export function BreatheWiseProvider({ children }: { children: React.ReactNode })
 
   const checklist = useMemo(() => {
     const base = buildDefaultChecklist(airQuality, profile);
-    return base.map((item) => ({
-      ...item,
-      completed: Boolean(checklistMap[item.id]),
-    }));
+    return base.map((item) => ({ ...item, completed: Boolean(checklistMap[item.id]) }));
   }, [airQuality, checklistMap, profile]);
 
   const impact = useMemo(
@@ -358,6 +325,7 @@ export function BreatheWiseProvider({ children }: { children: React.ReactNode })
   );
 }
 
+/** Hook returning the BreatheWise application context. Must be called inside `BreatheWiseProvider`. */
 export function useBreatheWise(): BreatheWiseContextValue {
   const ctx = useContext(BreatheWiseContext);
   if (!ctx) {

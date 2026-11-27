@@ -68,7 +68,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result, {
       status: 200,
-      headers: rateLimitHeaders(rate, ASSISTANT_RATE_LIMIT),
+      headers: {
+        ...rateLimitHeaders(rate, ASSISTANT_RATE_LIMIT),
+        "Cache-Control": "no-store",
+      },
     });
   } catch (error) {
     return jsonErrorResponse(error, 500);

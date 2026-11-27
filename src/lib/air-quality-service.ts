@@ -41,6 +41,9 @@ interface CacheRecord {
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 100;
+const FORECAST_THRESHOLD_MS = 30 * 60_000;
+const GEOCODING_TIMEOUT_MS = 5000;
+const AIR_QUALITY_TIMEOUT_MS = 6500;
 const snapshotCache = new Map<string, CacheRecord>();
 const inFlightRequests = new Map<string, Promise<AirQualitySnapshot>>();
 
@@ -53,9 +56,8 @@ function evictExpiredCache(now: number): void {
 }
 
 function setBoundedCache(key: string, record: CacheRecord): void {
-  const now = Date.now();
   if (snapshotCache.size >= MAX_CACHE_ENTRIES) {
-    evictExpiredCache(now);
+    evictExpiredCache(Date.now());
   }
   if (snapshotCache.size >= MAX_CACHE_ENTRIES) {
     const oldestKey = snapshotCache.keys().next().value;
@@ -66,15 +68,21 @@ function setBoundedCache(key: string, record: CacheRecord): void {
   snapshotCache.set(key, record);
 }
 
+/** Clears cached snapshots and active in-flight deduplication promises (used in tests). */
 export function clearAirQualityCache(): void {
   snapshotCache.clear();
   inFlightRequests.clear();
 }
 
-const DEMO_SCENARIO_CURVES: Record<
-  Exclude<DemoScenario, "auto">,
-  { basePm25: number; basePm10: number; no2: number; o3: number; label: string }
-> = {
+interface DemoCurveConfig {
+  basePm25: number;
+  basePm10: number;
+  no2: number;
+  o3: number;
+  label: string;
+}
+
+const DEMO_SCENARIO_CURVES: Record<Exclude<DemoScenario, "auto">, DemoCurveConfig> = {
   good: { basePm25: 22, basePm10: 45, no2: 24, o3: 38, label: "Clean Breeze Scenario" },
   moderate: { basePm25: 74, basePm10: 140, no2: 52, o3: 64, label: "Moderate Urban Haze" },
   poor: { basePm25: 106, basePm10: 196, no2: 68, o3: 54, label: "Winter Morning Smog" },
@@ -92,32 +100,21 @@ function inferScenarioForCity(
   return "poor";
 }
 
-export function buildDemoAirQualitySnapshot(params: {
-  city: string;
-  locality?: string;
-  latitude?: number;
-  longitude?: number;
-  scenario?: DemoScenario;
-  reason?: string;
-  referenceTimeIso?: string;
-}): AirQualitySnapshot {
-  const preset = findCityPreset(params.city);
-  const lat = params.latitude ?? preset?.latitude ?? 22.5726;
-  const lon = params.longitude ?? preset?.longitude ?? 88.3639;
-  const chosenScenario = inferScenarioForCity(params.city, params.scenario);
-  const cfg = DEMO_SCENARIO_CURVES[chosenScenario];
+function getDiurnalFactor(hour: number): number {
+  if (hour >= 6 && hour <= 10) return 1.24;
+  if (hour >= 13 && hour <= 16) return 0.72;
+  if (hour >= 18) return 1.18;
+  return 0.96;
+}
 
-  const baseTime = params.referenceTimeIso ? new Date(params.referenceTimeIso) : new Date();
+function buildSimulatedHourlySeries(baseTime: Date, cfg: DemoCurveConfig): HourlyAirQualityPoint[] {
   const hourly: HourlyAirQualityPoint[] = [];
-
   for (let offset = -12; offset <= 11; offset++) {
     const t = new Date(baseTime.getTime() + offset * 3600_000);
     const hour = t.getHours();
-    const diurnalFactor =
-      hour >= 6 && hour <= 10 ? 1.24 : hour >= 13 && hour <= 16 ? 0.72 : hour >= 18 ? 1.18 : 0.96;
-
-    const pm25 = Number((cfg.basePm25 * diurnalFactor).toFixed(1));
-    const pm10 = Number((cfg.basePm10 * diurnalFactor).toFixed(1));
+    const factor = getDiurnalFactor(hour);
+    const pm25 = Number((cfg.basePm25 * factor).toFixed(1));
+    const pm10 = Number((cfg.basePm10 * factor).toFixed(1));
     const aqiRes = calculateIndianAqi({ pm25, pm10, no2: cfg.no2, o3: cfg.o3 });
 
     hourly.push({
@@ -129,11 +126,32 @@ export function buildDemoAirQualitySnapshot(params: {
       observationType: "simulated",
     });
   }
+  return hourly;
+}
 
-  const currentPoint = hourly[12] ?? hourly[0]!;
+/**
+ * Generates an explicitly labeled synthetic air-quality snapshot for Demo Mode or fallback paths.
+ */
+export function buildDemoAirQualitySnapshot(params: {
+  city: string;
+  locality?: string;
+  latitude?: number;
+  longitude?: number;
+  scenario?: DemoScenario;
+  reason?: string;
+  referenceTimeIso?: string;
+}): AirQualitySnapshot {
+  const preset = findCityPreset(params.city);
+  const cfg = DEMO_SCENARIO_CURVES[inferScenarioForCity(params.city, params.scenario)];
+  const baseTime = params.referenceTimeIso ? new Date(params.referenceTimeIso) : new Date();
+  const hourly = buildSimulatedHourlySeries(baseTime, cfg);
+  const currentPoint = hourly[12] ?? hourly[0];
+  const pm25 = currentPoint?.pm25 ?? cfg.basePm25;
+  const pm10 = currentPoint?.pm10 ?? cfg.basePm10;
+
   const currentAqi = calculateIndianAqi({
-    pm25: currentPoint.pm25,
-    pm10: currentPoint.pm10,
+    pm25,
+    pm10,
     no2: cfg.no2,
     o3: cfg.o3,
   });
@@ -141,12 +159,12 @@ export function buildDemoAirQualitySnapshot(params: {
   return {
     city: preset?.name ?? params.city,
     locality: params.locality || undefined,
-    latitude: lat,
-    longitude: lon,
+    latitude: params.latitude ?? preset?.latitude ?? 22.5726,
+    longitude: params.longitude ?? preset?.longitude ?? 88.3639,
     aqi: currentAqi.aqi,
     category: currentAqi.category,
-    pm25: currentPoint.pm25,
-    pm10: currentPoint.pm10,
+    pm25,
+    pm10,
     no2: cfg.no2,
     o3: cfg.o3,
     mainPollutant: currentAqi.mainPollutant,
@@ -189,7 +207,7 @@ async function resolveCoordinates(
   url.searchParams.set("format", "json");
 
   const res = await fetch(url.toString(), {
-    signal: AbortSignal.timeout(5000),
+    signal: AbortSignal.timeout(GEOCODING_TIMEOUT_MS),
     headers: { Accept: "application/json" },
   });
 
@@ -236,7 +254,7 @@ function buildHourlyTimeline(
     });
 
     const hhmm = iso.includes("T") ? (iso.split("T")[1]?.slice(0, 5) ?? iso) : iso.slice(0, 5);
-    const observationType = pointMs > nowMs + 30 * 60_000 ? "forecast" : "observed";
+    const observationType = pointMs > nowMs + FORECAST_THRESHOLD_MS ? "forecast" : "observed";
 
     return {
       time: iso,
@@ -273,7 +291,7 @@ async function fetchLiveOpenMeteoSnapshot(params: {
   url.searchParams.set("timezone", "auto");
 
   const response = await fetch(url.toString(), {
-    signal: AbortSignal.timeout(6500),
+    signal: AbortSignal.timeout(AIR_QUALITY_TIMEOUT_MS),
     headers: { Accept: "application/json" },
     next: { revalidate: 600 },
   });
@@ -327,6 +345,22 @@ async function fetchLiveOpenMeteoSnapshot(params: {
   };
 }
 
+function readCachedSnapshot(cacheKey: string, locality?: string): AirQualitySnapshot | null {
+  const cached = snapshotCache.get(cacheKey);
+  if (!cached) return null;
+  if (cached.expiresAt <= Date.now()) {
+    snapshotCache.delete(cacheKey);
+    return null;
+  }
+  return {
+    ...cached.snapshot,
+    locality: locality || cached.snapshot.locality,
+  };
+}
+
+/**
+ * Fetches live Open-Meteo air quality (with bounded cache & request dedup) or returns labeled demo data.
+ */
 export async function getAirQualitySnapshot(params: {
   city: string;
   locality?: string;
@@ -350,29 +384,16 @@ export async function getAirQualitySnapshot(params: {
   }
 
   const cacheKey = `${params.city.trim().toLowerCase()}:${params.latitude ?? ""}:${params.longitude ?? ""}`;
-  const cached = snapshotCache.get(cacheKey);
-  if (cached) {
-    if (cached.expiresAt > Date.now()) {
-      return {
-        ...cached.snapshot,
-        locality: params.locality || cached.snapshot.locality,
-      };
-    }
-    snapshotCache.delete(cacheKey);
-  }
+  const cached = readCachedSnapshot(cacheKey, params.locality);
+  if (cached) return cached;
 
   const existingFlight = inFlightRequests.get(cacheKey);
-  if (existingFlight) {
-    return existingFlight;
-  }
+  if (existingFlight) return existingFlight;
 
   const fetchPromise = (async (): Promise<AirQualitySnapshot> => {
     try {
       const snapshot = await fetchLiveOpenMeteoSnapshot(params);
-      setBoundedCache(cacheKey, {
-        snapshot,
-        expiresAt: Date.now() + CACHE_TTL_MS,
-      });
+      setBoundedCache(cacheKey, { snapshot, expiresAt: Date.now() + CACHE_TTL_MS });
       return snapshot;
     } catch (error) {
       const reason =

@@ -34,11 +34,12 @@ describe("Local storage persistence & formatting utilities", () => {
   it("recovers gracefully from corrupted localStorage JSON", () => {
     window.localStorage.setItem("breathewise_profile_v1", "{bad-json");
     window.localStorage.setItem("breathewise_checklist_v1", "not-an-object");
-    window.localStorage.setItem("breathewise_streak_v1", "null");
+    window.localStorage.setItem("breathewise_streak_v1", JSON.stringify({ days: -4 }));
 
     expect(loadUserProfile().city).toBe("Kolkata");
     expect(loadChecklistState()).toEqual({});
     expect(loadStreakDays()).toBe(0);
+    expect(loadDataMode()).toBe("live");
   });
 
   it("tracks checklist completion, streak increment, and data mode", () => {

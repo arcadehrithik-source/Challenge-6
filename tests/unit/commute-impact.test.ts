@@ -39,5 +39,15 @@ describe("Commute comparison and emissions calculations", () => {
     expect(cycleImpact.estimatedCo2AvoidedKg).toBeGreaterThan(carImpact.estimatedCo2AvoidedKg);
     expect(cycleImpact.actionsCompleted).toBe(2);
     expect(cycleImpact.assumptions.length).toBeGreaterThanOrEqual(3);
+
+    const wfhImpact = calculateImpactMetrics({
+      checklist,
+      commuteMode: "work_from_home",
+      commuteDistanceKm: 12,
+    });
+    expect(wfhImpact.streakDays).toBe(1);
+
+    const moderateOptions = compareCommuteOptions(140, 6, "walking");
+    expect(moderateOptions.some((o) => o.isCurrentMode && o.mode === "walking")).toBe(true);
   });
 });

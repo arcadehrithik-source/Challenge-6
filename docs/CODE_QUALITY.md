@@ -1,15 +1,16 @@
 # Code Quality & Maintainability
 
 ## Standards & Tooling
-- **TypeScript Strictness**: `tsconfig.json` enforces `"strict": true` and `"noUncheckedIndexedAccess": true`.
-- **ESLint**: `eslint.config.mjs` runs `eslint-config-next/core-web-vitals`, `eslint-config-next/typescript`, React Compiler hooks validation, `@typescript-eslint/no-explicit-any: "error"`, and `@typescript-eslint/no-unused-vars: "error"`.
-- **Prettier**: `.prettierrc` standardizes formatting across `src/` and `tests/`.
+- **TypeScript Strictness**: `tsconfig.json` enforces `"strict": true` and `"noUncheckedIndexedAccess": true` with zero `as` type casts and zero `!` non-null assertions across `src/`.
+- **ESLint & Formatting**: `eslint.config.mjs` enforces `eslint-config-next/core-web-vitals`, `eslint-config-next/typescript`, React Compiler rules, `@typescript-eslint/no-explicit-any: "error"`, and `@typescript-eslint/no-unused-vars: "error"`, alongside Prettier (`npm run format:check`).
 
-## Key Refactorings Implemented
-1. **Modular Recommendation Engine (`src/lib/recommendation-engine.ts`)**: Decomposed the monolithic recommendation builder into focused domain helpers (`buildOutdoorRecommendations`, `buildHouseholdRecommendations`, `buildCommuteRecommendations`, `buildIndoorRecommendations`, `buildCookingAndSustainabilityRecommendations`) using a shared `RecommendationContext` interface.
-2. **Modular Onboarding Steps (`src/components/onboarding/steps/OnboardingSteps.tsx`)**: Extracted the 6 onboarding steps (`StepLocation`, `StepHousehold`, `StepLifestyle`, `StepCommute`, `StepIndoor`, `StepPreferences`) from `OnboardingWizard.tsx` to keep components concise and single-purpose.
-3. **Hydration-Safe State Initialization (`src/components/providers/BreatheWiseProvider.tsx`)**: Stabilized initial SSR snapshot timestamps and deferred `localStorage` hydration via `queueMicrotask`, eliminating React hydration mismatch errors (#418) and `react-hooks/set-state-in-effect` warnings.
-4. **React Hook Form `useWatch` (`src/components/onboarding/OnboardingWizard.tsx`)**: Replaced `form.watch()` with `useWatch({ control: form.control })` for React Compiler compatibility and narrower re-renders.
+## Key Architectural Refactorings
+1. **Zod Schema-Validated Storage (`src/lib/storage.ts`)**: Replaced ad-hoc JSON casts and repeated `try/catch` blocks with shared `readStorageRaw`/`writeStorageRaw` helpers and Zod schemas (`checklistMapSchema`, `streakRecordSchema`).
+2. **Centralized AQI Constants & Modular Domain Rules (`src/lib/aqi.ts`, `src/lib/recommendation-engine.ts`, `src/lib/recommendations/builders.ts`)**: Shared `AQI_THRESHOLDS` constants across rule evaluators and decomposed outdoor, household, commute, indoor, and cooking/sustainability builders.
+3. **Decomposed Air Quality & AI Services (`src/lib/air-quality-service.ts`, `src/lib/ai-assistant.ts`)**: Extracted timeline mapping, live fetch, cache eviction, and lookup-table topic matching into cohesive single-purpose helpers with runtime envelope schemas.
+4. **Component Modularity & Hooks (`src/components/`)**:
+   - Extracted `useToastQueue` (`crypto.randomUUID()` IDs + timer cleanup) from `BreatheWiseProvider.tsx` and unified `impact` derivation in context.
+   - Split presentational sections out of `DashboardOverview.tsx` (`OverviewCards.tsx`), `LandingPage.tsx` (`LandingSections.tsx`), `BreatheWiseAssistantDialog.tsx` (`AssistantResponseView.tsx`), and `OnboardingWizard.tsx` (`onboarding-config.ts`, `steps/OnboardingSteps.tsx`).
 
 ## Verification Commands
 ```bash

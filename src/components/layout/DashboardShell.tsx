@@ -24,6 +24,7 @@ import { BreatheWiseAssistantDialog } from "@/components/assistant/BreatheWiseAs
 import { useBreatheWise } from "@/components/providers/BreatheWiseProvider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { Recommendation } from "@/lib/types";
 import { cn, formatEnumLabel } from "@/lib/utils";
 import { Logo } from "./Logo";
 
@@ -67,6 +68,92 @@ function SidebarNavLinks({ pathname, onNavigate }: { pathname: string; onNavigat
   );
 }
 
+function AlertsPopover({
+  open,
+  onToggle,
+  topRec,
+  healthAdvisory,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  topRec?: Recommendation;
+  healthAdvisory: string;
+}) {
+  return (
+    <div className="relative">
+      <Button
+        size="icon"
+        variant="ghost"
+        aria-label="View daily air alerts"
+        aria-expanded={open}
+        aria-controls="daily-alerts-popover"
+        onClick={onToggle}
+      >
+        <Bell className="h-4 w-4" aria-hidden="true" />
+      </Button>
+      {open && (
+        <div
+          id="daily-alerts-popover"
+          role="region"
+          aria-label="Air quality alert summary"
+          className="absolute right-0 z-50 mt-2 w-72 rounded-2xl border border-[#dce5df] bg-white p-4 shadow-xl"
+        >
+          <p className="text-xs font-bold uppercase tracking-wider text-emerald-900">
+            Top Daily Priority
+          </p>
+          <p className="mt-1 text-sm font-semibold text-[#10201a]">
+            {topRec?.title ?? "Check current AQI conditions"}
+          </p>
+          <p className="mt-1 text-xs text-[#4b5e56]">{topRec?.whenToDoIt ?? healthAdvisory}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MobileNavDrawer({
+  open,
+  pathname,
+  closeButtonRef,
+  onClose,
+}: {
+  open: boolean;
+  pathname: string;
+  closeButtonRef: React.RefObject<HTMLButtonElement | null>;
+  onClose: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-40 flex lg:hidden">
+      <div className="fixed inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label="Mobile dashboard navigation"
+        className="relative z-50 w-72 bg-white p-4 shadow-xl"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <Logo href="/" />
+          <button
+            ref={closeButtonRef}
+            type="button"
+            aria-label="Close navigation"
+            onClick={onClose}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-[#edf3ef]"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <SidebarNavLinks pathname={pathname} onNavigate={onClose} />
+      </aside>
+    </div>
+  );
+}
+
+/**
+ * Shared dashboard layout shell with accessible skip link, top feed controls,
+ * responsive desktop sidebar / mobile drawer, demo indicator banner, and AI dialog.
+ */
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const {
@@ -105,8 +192,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const topRec = recommendations[0];
-
   return (
     <div className="min-h-screen bg-[#f6f8f6] text-[#10201a]">
       <a
@@ -116,14 +201,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         Skip to main content
       </a>
 
-      {/* Top Navigation */}
       <header className="sticky top-0 z-30 border-b border-[#dce5df] bg-white/95 backdrop-blur-md">
         <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <button
               ref={menuButtonRef}
               type="button"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#d0ddd5] lg:hidden cursor-pointer"
+              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-[#d0ddd5] lg:hidden"
               aria-label={sidebarOpen ? "Close navigation menu" : "Open navigation menu"}
               aria-expanded={sidebarOpen}
               onClick={() => setSidebarOpen((v) => !v)}
@@ -168,36 +252,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               />
             </Button>
 
-            <div className="relative">
-              <Button
-                size="icon"
-                variant="ghost"
-                aria-label="View daily air alerts"
-                aria-expanded={alertsOpen}
-                aria-controls="daily-alerts-popover"
-                onClick={() => setAlertsOpen((v) => !v)}
-              >
-                <Bell className="h-4 w-4" aria-hidden="true" />
-              </Button>
-              {alertsOpen && (
-                <div
-                  id="daily-alerts-popover"
-                  role="region"
-                  aria-label="Air quality alert summary"
-                  className="absolute right-0 mt-2 w-72 rounded-2xl border border-[#dce5df] bg-white p-4 shadow-xl z-50"
-                >
-                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-900">
-                    Top Daily Priority
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-[#10201a]">
-                    {topRec?.title ?? "Check current AQI conditions"}
-                  </p>
-                  <p className="mt-1 text-xs text-[#4b5e56]">
-                    {topRec?.whenToDoIt ?? airQuality.healthAdvisory}
-                  </p>
-                </div>
-              )}
-            </div>
+            <AlertsPopover
+              open={alertsOpen}
+              onToggle={() => setAlertsOpen((v) => !v)}
+              topRec={recommendations[0]}
+              healthAdvisory={airQuality.healthAdvisory}
+            />
 
             <Button size="sm" variant="emerald" onClick={() => setAssistantOpen(true)}>
               <Sparkles className="h-4 w-4" aria-hidden="true" />
@@ -215,7 +275,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="mx-auto flex max-w-[1440px]">
-        {/* Desktop Sidebar */}
         <aside
           aria-label="Dashboard navigation"
           className="hidden w-64 shrink-0 border-r border-[#dce5df] bg-white p-4 lg:block"
@@ -236,36 +295,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        {/* Mobile Drawer */}
-        {sidebarOpen && (
-          <div className="fixed inset-0 z-40 flex lg:hidden">
-            <div
-              className="fixed inset-0 bg-black/40"
-              onClick={() => setSidebarOpen(false)}
-              aria-hidden="true"
-            />
-            <aside
-              role="dialog"
-              aria-modal="true"
-              aria-label="Mobile dashboard navigation"
-              className="relative z-50 w-72 bg-white p-4 shadow-xl"
-            >
-              <div className="mb-4 flex items-center justify-between">
-                <Logo href="/" />
-                <button
-                  ref={closeDrawerButtonRef}
-                  type="button"
-                  aria-label="Close navigation"
-                  onClick={() => setSidebarOpen(false)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-[#edf3ef]"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <SidebarNavLinks pathname={pathname} onNavigate={() => setSidebarOpen(false)} />
-            </aside>
-          </div>
-        )}
+        <MobileNavDrawer
+          open={sidebarOpen}
+          pathname={pathname}
+          closeButtonRef={closeDrawerButtonRef}
+          onClose={() => setSidebarOpen(false)}
+        />
 
         <main id="dashboard-main" className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
           {airQuality.dataMode === "demo" && (
